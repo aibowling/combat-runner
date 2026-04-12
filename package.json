@@ -1,0 +1,13 @@
+{
+  "name": "kahoot-but-for-drews-system",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "start": "node server/dist/server/src/index.js",
+    "postinstall": "npm --prefix shared install && npm --prefix server install && npm --prefix client install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

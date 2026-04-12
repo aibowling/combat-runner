@@ -1,0 +1,6 @@
+{
+  "name": "@drews-system/shared",
+  "private": true,
+  "type": "module",
+  "main": "types.ts"
+}

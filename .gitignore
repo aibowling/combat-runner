@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.tsbuildinfo
+
+# TypeScript compiled output in source dirs
+client/src/**/*.js
+client/src/**/*.js.map
+client/src/**/*.d.ts
+client/src/**/*.d.ts.map
+!client/src/vite-env.d.ts
+shared/*.js
+shared/*.js.map
+shared/*.d.ts
+shared/*.d.ts.map
