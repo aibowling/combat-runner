@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { ReactionBox as RBType } from '@shared/types';
+import type { ReactionBox as RBType } from '../shared/types';
 
 interface Props {
   box: RBType;

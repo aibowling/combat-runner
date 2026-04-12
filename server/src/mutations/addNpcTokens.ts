@@ -1,7 +1,7 @@
 import pg from 'pg';
 import type { MutationResult } from './mutate.js';
 import { getTopPlayerId } from './mutate.js';
-import { MAX_NPC_BATCH, MAX_NAME_LENGTH } from '../../../shared/types.js';
+import { MAX_NPC_BATCH, MAX_NAME_LENGTH } from '../shared/types.js';
 
 export async function addNpcTokens(
   client: pg.PoolClient,

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState, ReactionBox, Player, QueueToken } from '@shared/types';
+import type { GameState, ReactionBox, Player, QueueToken } from './shared/types';
 
 interface PendingToken {
   tempId: string;

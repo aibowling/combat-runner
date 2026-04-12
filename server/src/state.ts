@@ -1,6 +1,6 @@
 import pg from 'pg';
 import type { Server } from 'socket.io';
-import type { GameState } from '../../shared/types.js';
+import type { GameState } from './shared/types.js';
 
 export async function loadGameState(client: pg.PoolClient, io?: Server): Promise<GameState> {
   const gsResult = await client.query('SELECT current_turn, round_ended FROM game_state WHERE id = 1');

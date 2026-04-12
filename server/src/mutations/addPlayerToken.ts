@@ -1,7 +1,7 @@
 import pg from 'pg';
 import type { MutationResult } from './mutate.js';
 import { getTopPlayerId, checkRoundEnded } from './mutate.js';
-import { MAX_MAIN_TOKENS, MAX_CUSTOM_TOKENS, MAX_NAME_LENGTH, type PlayerTokenKind } from '../../../shared/types.js';
+import { MAX_MAIN_TOKENS, MAX_CUSTOM_TOKENS, MAX_NAME_LENGTH, type PlayerTokenKind } from '../shared/types.js';
 
 export async function addPlayerToken(
   client: pg.PoolClient,

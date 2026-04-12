@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { useStore } from '../store';
 import { getSocket } from '../socket';
-import { C2S } from '@shared/types';
+import { C2S } from '../shared/types';
 
 interface Props {
   isDm: boolean;

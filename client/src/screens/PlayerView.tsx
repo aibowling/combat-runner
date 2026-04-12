@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { getSocket } from '../socket';
-import { C2S, MAX_MAIN_TOKENS, MAX_CUSTOM_TOKENS } from '@shared/types';
+import { C2S, MAX_MAIN_TOKENS, MAX_CUSTOM_TOKENS } from '../shared/types';
 import ReactionBox from '../components/ReactionBox';
 import Queue from '../components/Queue';
 

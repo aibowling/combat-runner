@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { useStore } from './store';
-import { S2C, type HelloPayload, type HelloAck, type StateUpdatePayload, type TurnNewPayload } from '@shared/types';
+import { S2C, type HelloPayload, type HelloAck, type StateUpdatePayload, type TurnNewPayload } from './shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 

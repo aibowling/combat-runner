@@ -1,7 +1,7 @@
 import pg from 'pg';
 import type { Server } from 'socket.io';
 import { loadGameState, captureSnapshot, type DbSnapshot } from '../state.js';
-import { S2C } from '../../../shared/types.js';
+import { S2C } from '../shared/types.js';
 
 export interface MutationResult {
   newTurn?: boolean;

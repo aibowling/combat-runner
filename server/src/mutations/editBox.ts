@@ -1,6 +1,6 @@
 import pg from 'pg';
 import type { MutationResult } from './mutate.js';
-import { MAX_NAME_LENGTH } from '../../../shared/types.js';
+import { MAX_NAME_LENGTH } from '../shared/types.js';
 
 export async function createBox(client: pg.PoolClient, label: string): Promise<MutationResult> {
   const sanitized = label.trim().slice(0, MAX_NAME_LENGTH) || 'New Box';

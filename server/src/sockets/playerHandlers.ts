@@ -1,6 +1,6 @@
 import type { Socket, Server } from 'socket.io';
 import pg from 'pg';
-import { C2S } from '../../../shared/types.js';
+import { C2S } from '../shared/types.js';
 import { mutate } from '../mutations/mutate.js';
 import { addPlayerToken } from '../mutations/addPlayerToken.js';
 import { removeToken } from '../mutations/removeToken.js';

@@ -7,7 +7,7 @@ import { checkRateLimit } from './rateLimit.js';
 import { registerDmHandlers } from './dmHandlers.js';
 import { registerPlayerHandlers } from './playerHandlers.js';
 import { loadGameState } from '../state.js';
-import { C2S, S2C, MAX_NAME_LENGTH, type HelloPayload, type HelloAck } from '../../../shared/types.js';
+import { C2S, S2C, MAX_NAME_LENGTH, type HelloPayload, type HelloAck } from '../shared/types.js';
 import { emitFullState } from './broadcast.js';
 
 export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Server {

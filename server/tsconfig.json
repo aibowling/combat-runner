@@ -2,12 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "..",
+    "rootDir": "src",
     "module": "ES2022",
-    "moduleResolution": "bundler",
-    "paths": {
-      "@shared/*": ["../shared/*"]
-    }
+    "moduleResolution": "bundler"
   },
-  "include": ["src/**/*", "../shared/**/*"]
+  "include": ["src/**/*"]
 }

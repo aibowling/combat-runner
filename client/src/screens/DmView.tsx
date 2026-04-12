@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { getSocket } from '../socket';
-import { C2S } from '@shared/types';
+import { C2S } from '../shared/types';
 import ReactionBoxEditor from '../components/ReactionBoxEditor';
 import Queue from '../components/Queue';
 

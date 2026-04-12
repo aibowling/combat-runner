@@ -21,7 +21,7 @@ export async function runMigrations(pool: pg.Pool): Promise<void> {
       )
     `);
 
-    const migrationsDir = path.resolve(process.cwd(), 'server', 'src', 'migrations');
+    const migrationsDir = path.resolve(process.cwd(), 'src', 'migrations');
     const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
 
     for (const file of files) {
