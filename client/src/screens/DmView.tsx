@@ -13,7 +13,8 @@ export default function DmView({ onLeave }: Props) {
   const boxOrder = useStore((s) => s.boxOrder);
   const roundEnded = useStore((s) => s.roundEnded);
   const currentTurn = useStore((s) => s.currentTurn);
-  const players = useStore((s) => Object.values(s.playersById));
+  const playersById = useStore((s) => s.playersById);
+  const players = Object.values(playersById);
   const [npcName, setNpcName] = useState('');
   const [npcCount, setNpcCount] = useState(1);
   const [addForPlayerId, setAddForPlayerId] = useState<number | null>(null);
