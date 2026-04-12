@@ -59,14 +59,7 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
             const gsResult = await client.query('SELECT dm_session_id FROM game_state WHERE id = 1');
             const currentDmSid = gsResult.rows[0]?.dm_session_id;
 
-            if (currentDmSid && currentDmSid !== sessionId) {
-              const sockets = await io.fetchSockets();
-              const dmConnected = sockets.some(s => s.data.sessionId === currentDmSid && s.id !== socket.id);
-              if (dmConnected) {
-                ack?.({ ok: false, sessionId, isDm: false, state: await loadGameState(client, io), version: 0, message: 'A DM is already connected' });
-                return;
-              }
-            }
+            // DM takeover always allowed — trusted friend group
 
             await client.query('UPDATE game_state SET dm_session_id = $1 WHERE id = 1', [sessionId]);
             socket.data.isDm = true;
