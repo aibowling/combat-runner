@@ -12,15 +12,20 @@ interface Props {
 export default function DmView({ onLeave }: Props) {
   const boxOrder = useStore((s) => s.boxOrder);
   const roundEnded = useStore((s) => s.roundEnded);
+  const roundStarted = useStore((s) => s.roundStarted);
   const currentTurn = useStore((s) => s.currentTurn);
   const playersById = useStore((s) => s.playersById);
   const players = Object.values(playersById);
+  const queueOrder = useStore((s) => s.queueOrder);
+  const queueById = useStore((s) => s.queueById);
   const [npcName, setNpcName] = useState('');
   const [npcCount, setNpcCount] = useState(1);
   const [addForPlayerId, setAddForPlayerId] = useState<number | null>(null);
   const [addForKind, setAddForKind] = useState<string>('main');
 
   const socket = getSocket();
+
+  const hasPendingTokens = queueOrder.some(id => !queueById[id]?.completed);
 
   const addBox = () => {
     socket?.emit(C2S.DM_BOX_CREATE, { label: `Box ${boxOrder.length + 1}` });
@@ -37,9 +42,19 @@ export default function DmView({ onLeave }: Props) {
     socket?.emit(C2S.DM_ADVANCE, {});
   };
 
+  const handleStartRound = () => {
+    socket?.emit(C2S.DM_START_ROUND, {});
+  };
+
   const handleEndRound = () => {
     if (confirm('End round? This will reroll reaction values < 10 and reset all token budgets.')) {
       socket?.emit(C2S.DM_END_ROUND, {});
+    }
+  };
+
+  const handleNewCombat = () => {
+    if (confirm('Start new combat? This will clear ALL tokens, reaction boxes, and reset everything.')) {
+      socket?.emit(C2S.DM_NEW_COMBAT, {});
     }
   };
 
@@ -61,6 +76,7 @@ export default function DmView({ onLeave }: Props) {
         <h2>DM Control Panel — Turn {currentTurn}</h2>
         <div className="dm-header-actions">
           <button className="btn btn-ghost" onClick={handleUndo}>Undo</button>
+          <button className="btn btn-danger btn-small" onClick={handleNewCombat}>New Combat</button>
           <button className="btn btn-ghost btn-small" onClick={onLeave}>Leave</button>
         </div>
       </div>
@@ -82,12 +98,19 @@ export default function DmView({ onLeave }: Props) {
         <div className="dm-right">
           <div className="section-header">
             <h3>Initiative Queue</h3>
-            <button className="btn btn-primary" onClick={advance}>Advance &gt;</button>
+            <div className="header-buttons">
+              {!roundStarted && hasPendingTokens && (
+                <button className="btn btn-primary" onClick={handleStartRound}>Start Round</button>
+              )}
+              {roundStarted && hasPendingTokens && (
+                <button className="btn btn-primary" onClick={advance}>Advance &gt;</button>
+              )}
+            </div>
           </div>
 
           {roundEnded && (
             <div className="end-round-banner">
-              <p>Queue is empty — round complete!</p>
+              <p>All tokens drawn — round complete!</p>
               <button className="btn btn-danger btn-large" onClick={handleEndRound}>
                 End Round & Reroll
               </button>
@@ -108,6 +131,7 @@ export default function DmView({ onLeave }: Props) {
                 maxLength={40}
                 autoCapitalize="off"
                 autoCorrect="off"
+                className="npc-name-input"
               />
               <input
                 type="number"
@@ -116,7 +140,7 @@ export default function DmView({ onLeave }: Props) {
                 value={npcCount}
                 onChange={(e) => setNpcCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
                 inputMode="numeric"
-                className="count-input"
+                className="npc-count-input"
               />
               <button className="btn" onClick={addNpc} disabled={!npcName.trim()}>Add</button>
             </div>

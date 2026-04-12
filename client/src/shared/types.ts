@@ -23,11 +23,13 @@ export interface QueueToken {
   displayName: string;
   kind: TokenKind;
   playerId: number | null;
+  completed: boolean;
 }
 
 export interface GameState {
   currentTurn: number;
   roundEnded: boolean;
+  roundStarted: boolean;
   reactionBoxes: ReactionBox[];
   players: Player[];
   queue: QueueToken[];
@@ -121,6 +123,8 @@ export const C2S = {
   DM_ADVANCE: 'dm:advance',
   DM_TOKEN_REMOVE: 'dm:token:remove',
   DM_END_ROUND: 'dm:endRound',
+  DM_START_ROUND: 'dm:startRound',
+  DM_NEW_COMBAT: 'dm:newCombat',
   DM_UNDO: 'dm:undo',
   PLAYER_TOKEN_ADD: 'player:token:add',
   PLAYER_TOKEN_REMOVE: 'player:token:remove',

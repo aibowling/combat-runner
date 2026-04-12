@@ -8,6 +8,8 @@ import { addPlayerToken } from '../mutations/addPlayerToken.js';
 import { advanceTurn } from '../mutations/advanceTurn.js';
 import { removeToken } from '../mutations/removeToken.js';
 import { endRound } from '../mutations/endRound.js';
+import { startRound } from '../mutations/startRound.js';
+import { newCombat } from '../mutations/newCombat.js';
 import { undo } from '../mutations/undo.js';
 
 function isDm(socket: Socket, dmSessionId: string | null): boolean {
@@ -79,6 +81,14 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
 
   socket.on(C2S.DM_END_ROUND, wrapDm(socket, pool, io, async (pool, io) => {
     await mutate(pool, io, (client) => endRound(client));
+  }));
+
+  socket.on(C2S.DM_START_ROUND, wrapDm(socket, pool, io, async (pool, io) => {
+    await mutate(pool, io, (client) => startRound(client));
+  }));
+
+  socket.on(C2S.DM_NEW_COMBAT, wrapDm(socket, pool, io, async (pool, io) => {
+    await mutate(pool, io, (client) => newCombat(client));
   }));
 
   socket.on(C2S.DM_UNDO, wrapDm(socket, pool, io, async (pool, io) => {

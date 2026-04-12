@@ -130,7 +130,7 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
         setTimeout(() => emitFullState(io, pool).catch(console.error), 100);
       } catch (err: any) {
         console.error('[hello]', err);
-        ack?.({ ok: false, sessionId: socket.data.sessionId || '', isDm: false, state: { currentTurn: 1, roundEnded: false, reactionBoxes: [], players: [], queue: [] }, version: 0, message: 'Server error' });
+        ack?.({ ok: false, sessionId: socket.data.sessionId || '', isDm: false, state: { currentTurn: 1, roundEnded: false, roundStarted: false, reactionBoxes: [], players: [], queue: [] }, version: 0, message: 'Server error' });
       }
     });
 

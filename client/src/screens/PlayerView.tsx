@@ -13,6 +13,7 @@ export default function PlayerView({ onLeave }: Props) {
   const boxOrder = useStore((s) => s.boxOrder);
   const boxesById = useStore((s) => s.boxesById);
   const currentTurn = useStore((s) => s.currentTurn);
+  const roundStarted = useStore((s) => s.roundStarted);
   const queueOrder = useStore((s) => s.queueOrder);
   const queueById = useStore((s) => s.queueById);
   const self = useStore((s) => s.self);
@@ -23,8 +24,10 @@ export default function PlayerView({ onLeave }: Props) {
 
   const socket = getSocket();
 
-  const myTokenCount = queueOrder.filter((id) => queueById[id]?.playerId === self.playerId).length
-    + pendingTokens.length;
+  const myTokensInQueue = queueOrder.filter((id) => queueById[id]?.playerId === self.playerId);
+  const myActiveTokens = myTokensInQueue.filter(id => !queueById[id]?.completed);
+  const myCompletedTokens = myTokensInQueue.filter(id => queueById[id]?.completed);
+  const allMyTokensDrawn = roundStarted && myTokensInQueue.length > 0 && myActiveTokens.length === 0;
 
   const addToken = (kind: 'main' | 'bonus' | 'reaction' | 'held') => {
     if (optimisticMainUsed >= MAX_MAIN_TOKENS) return;
@@ -61,9 +64,17 @@ export default function PlayerView({ onLeave }: Props) {
     <div className="player-view">
       <div className="player-header">
         <h2>Turn {currentTurn}</h2>
-        <span className="token-count">You have {myTokenCount} token{myTokenCount !== 1 ? 's' : ''} in queue</span>
+        <span className="token-count">
+          {myActiveTokens.length + pendingTokens.length} token{myActiveTokens.length + pendingTokens.length !== 1 ? 's' : ''} remaining
+        </span>
         <button className="btn btn-ghost btn-small" onClick={onLeave}>Leave</button>
       </div>
+
+      {allMyTokensDrawn && (
+        <div className="out-of-actions-banner">
+          You're out of actions for this round!
+        </div>
+      )}
 
       {boxOrder.length > 0 && (
         <div className="boxes-row">
@@ -78,64 +89,72 @@ export default function PlayerView({ onLeave }: Props) {
         <Queue isDm={false} onRemoveOwn={removeMyToken} />
       </div>
 
-      <div className="player-actions">
-        <div className="action-buttons">
-          <button
-            className="btn btn-primary action-btn"
-            onClick={() => addToken('main')}
-            disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-          >
-            Main Action
-            <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-          </button>
-          <button
-            className="btn action-btn"
-            onClick={() => addToken('bonus')}
-            disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-          >
-            Bonus
-            <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-          </button>
-          <button
-            className="btn action-btn"
-            onClick={() => addToken('reaction')}
-            disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-          >
-            Reaction
-            <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-          </button>
-          <button
-            className="btn action-btn"
-            onClick={() => addToken('held')}
-            disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-          >
-            Held
-            <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-          </button>
-        </div>
+      {!roundStarted && (
+        <div className="player-actions">
+          <div className="action-buttons">
+            <button
+              className="btn btn-primary action-btn"
+              onClick={() => addToken('main')}
+              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
+            >
+              Main Action
+              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
+            </button>
+            <button
+              className="btn action-btn"
+              onClick={() => addToken('bonus')}
+              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
+            >
+              Bonus
+              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
+            </button>
+            <button
+              className="btn action-btn"
+              onClick={() => addToken('reaction')}
+              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
+            >
+              Reaction
+              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
+            </button>
+            <button
+              className="btn action-btn"
+              onClick={() => addToken('held')}
+              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
+            >
+              Held
+              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
+            </button>
+          </div>
 
-        <div className="custom-token-row">
-          <input
-            type="text"
-            placeholder="Custom token name"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addCustomToken()}
-            disabled={optimisticCustomUsed >= MAX_CUSTOM_TOKENS}
-            maxLength={40}
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <button
-            className="btn"
-            onClick={addCustomToken}
-            disabled={!customName.trim() || optimisticCustomUsed >= MAX_CUSTOM_TOKENS}
-          >
-            + Custom ({optimisticCustomUsed}/{MAX_CUSTOM_TOKENS})
-          </button>
+          <div className="custom-token-row">
+            <input
+              type="text"
+              placeholder="Custom token name"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addCustomToken()}
+              disabled={optimisticCustomUsed >= MAX_CUSTOM_TOKENS}
+              maxLength={40}
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <button
+              className="btn"
+              onClick={addCustomToken}
+              disabled={!customName.trim() || optimisticCustomUsed >= MAX_CUSTOM_TOKENS}
+            >
+              + Custom ({optimisticCustomUsed}/{MAX_CUSTOM_TOKENS})
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {roundStarted && !allMyTokensDrawn && (
+        <div className="player-actions">
+          <p className="waiting-text">Round in progress — waiting for your turn...</p>
+        </div>
+      )}
     </div>
   );
 }

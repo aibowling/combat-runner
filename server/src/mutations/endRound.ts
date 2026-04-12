@@ -4,7 +4,7 @@ import type { MutationResult } from './mutate.js';
 export async function endRound(client: pg.PoolClient): Promise<MutationResult> {
   const { rows } = await client.query('SELECT round_ended FROM game_state WHERE id = 1');
   if (!rows[0].round_ended) {
-    throw new Error('Round is not ended yet — queue is not empty');
+    throw new Error('Round is not ended yet — tokens still remain');
   }
 
   await client.query(`
@@ -18,9 +18,10 @@ export async function endRound(client: pg.PoolClient): Promise<MutationResult> {
         )
   `);
 
+  await client.query('DELETE FROM initiative_tokens');
   await client.query('UPDATE players SET main_tokens_used = 0, custom_tokens_used = 0');
   await client.query(
-    'UPDATE game_state SET current_turn = current_turn + 1, round_ended = false, version = version + 1 WHERE id = 1'
+    'UPDATE game_state SET current_turn = current_turn + 1, round_ended = false, round_started = false, version = version + 1 WHERE id = 1'
   );
 
   return { newTurn: true };

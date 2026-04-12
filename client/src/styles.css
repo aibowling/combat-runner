@@ -242,8 +242,11 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   border-color: var(--accent);
   background: rgba(233, 69, 96, 0.1);
 }
+.queue-token-completed { opacity: 0.5; text-decoration: line-through; }
 .queue-token-npc { opacity: 0.8; }
 .queue-token-pending { opacity: 0.5; border-style: dashed; }
+.queue-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); padding: 8px 0 4px; }
+.queue-remaining { font-size: 13px; color: var(--text-muted); padding: 8px 0; font-style: italic; }
 .token-kind-badge {
   font-size: 11px;
   text-transform: uppercase;
@@ -278,7 +281,8 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   gap: 8px;
   align-items: center;
 }
-.add-npc-form input[type="text"] { flex: 1; }
+.npc-name-input { flex: 3 !important; }
+.npc-count-input { width: 64px !important; flex: 0 0 64px !important; text-align: center; }
 .add-for-player-form select { flex: 1; }
 
 /* Player View */
@@ -322,3 +326,27 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   gap: 8px;
 }
 .custom-token-row input { flex: 1; }
+
+/* Out of actions banner */
+.out-of-actions-banner {
+  background: rgba(233, 69, 96, 0.15);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0 16px;
+}
+
+.waiting-text {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
+}

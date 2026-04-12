@@ -11,6 +11,7 @@ interface Store {
   version: number;
   currentTurn: number;
   roundEnded: boolean;
+  roundStarted: boolean;
   lastSeenTurn: number;
 
   boxesById: Record<number, ReactionBox>;
@@ -39,6 +40,7 @@ export const useStore = create<Store>((set, get) => ({
   version: 0,
   currentTurn: 1,
   roundEnded: false,
+  roundStarted: false,
   lastSeenTurn: 0,
 
   boxesById: {},
@@ -94,6 +96,7 @@ export const useStore = create<Store>((set, get) => ({
       version,
       currentTurn: state.currentTurn,
       roundEnded: state.roundEnded,
+      roundStarted: state.roundStarted,
       lastSeenTurn: state.currentTurn,
       boxesById,
       boxOrder,

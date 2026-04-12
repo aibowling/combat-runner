@@ -66,15 +66,20 @@ export async function mutate(
 
 export async function getTopPlayerId(client: pg.PoolClient): Promise<number | null> {
   const result = await client.query(
-    'SELECT player_id FROM initiative_tokens ORDER BY position, id LIMIT 1'
+    'SELECT player_id FROM initiative_tokens WHERE completed = false ORDER BY position, id LIMIT 1'
   );
   return result.rows[0]?.player_id ?? null;
 }
 
 export async function checkRoundEnded(client: pg.PoolClient): Promise<void> {
-  const { rows } = await client.query('SELECT count(*)::int AS count FROM initiative_tokens');
+  const { rows } = await client.query('SELECT count(*)::int AS count FROM initiative_tokens WHERE completed = false');
   if (rows[0].count === 0) {
-    await client.query('UPDATE game_state SET round_ended = true, version = version + 1 WHERE id = 1');
+    const { rows: totalRows } = await client.query('SELECT count(*)::int AS count FROM initiative_tokens');
+    if (totalRows[0].count > 0) {
+      await client.query('UPDATE game_state SET round_ended = true, version = version + 1 WHERE id = 1');
+    } else {
+      await client.query('UPDATE game_state SET version = version + 1 WHERE id = 1');
+    }
   } else {
     await client.query('UPDATE game_state SET round_ended = false, version = version + 1 WHERE id = 1');
   }
