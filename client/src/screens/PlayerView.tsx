@@ -26,32 +26,31 @@ export default function PlayerView({ onLeave }: Props) {
 
   const myTokensInQueue = queueOrder.filter((id) => queueById[id]?.playerId === self.playerId);
   const myActiveTokens = myTokensInQueue.filter(id => !queueById[id]?.completed);
-  const myCompletedTokens = myTokensInQueue.filter(id => queueById[id]?.completed);
   const allMyTokensDrawn = roundStarted && myTokensInQueue.length > 0 && myActiveTokens.length === 0;
 
-  const addToken = (kind: 'main' | 'bonus' | 'reaction' | 'held') => {
+  const addMain = () => {
     if (optimisticMainUsed >= MAX_MAIN_TOKENS) return;
-
     const tempId = `pending-${Date.now()}-${Math.random()}`;
     useStore.getState().addPendingToken({
-      tempId,
-      kind,
-      displayName: `${kind} (pending...)`,
-    }, false);
+      tempId, kind: 'main', displayName: 'main (pending...)',
+    }, 'main');
+    socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind: 'main' });
+  };
 
-    socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind });
+  const addBonus = () => {
+    const tempId = `pending-${Date.now()}-${Math.random()}`;
+    useStore.getState().addPendingToken({
+      tempId, kind: 'bonus', displayName: 'bonus (pending...)',
+    }, 'bonus');
+    socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind: 'bonus' });
   };
 
   const addCustomToken = () => {
     if (!customName.trim() || optimisticCustomUsed >= MAX_CUSTOM_TOKENS) return;
-
     const tempId = `pending-${Date.now()}-${Math.random()}`;
     useStore.getState().addPendingToken({
-      tempId,
-      kind: 'custom',
-      displayName: customName.trim(),
-    }, true);
-
+      tempId, kind: 'custom', displayName: customName.trim(),
+    }, 'custom');
     socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind: 'custom', name: customName.trim() });
     setCustomName('');
   };
@@ -91,10 +90,10 @@ export default function PlayerView({ onLeave }: Props) {
 
       {!roundStarted && (
         <div className="player-actions">
-          <div className="action-buttons">
+          <div className="action-buttons action-buttons-2col">
             <button
               className="btn btn-primary action-btn"
-              onClick={() => addToken('main')}
+              onClick={addMain}
               disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
             >
               Main Action
@@ -102,27 +101,10 @@ export default function PlayerView({ onLeave }: Props) {
             </button>
             <button
               className="btn action-btn"
-              onClick={() => addToken('bonus')}
-              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
+              onClick={addBonus}
             >
               Bonus
-              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-            </button>
-            <button
-              className="btn action-btn"
-              onClick={() => addToken('reaction')}
-              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-            >
-              Reaction
-              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-            </button>
-            <button
-              className="btn action-btn"
-              onClick={() => addToken('held')}
-              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-            >
-              Held
-              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
+              <span className="counter">unlimited</span>
             </button>
           </div>
 

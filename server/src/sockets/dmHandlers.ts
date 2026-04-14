@@ -10,6 +10,7 @@ import { removeToken } from '../mutations/removeToken.js';
 import { endRound } from '../mutations/endRound.js';
 import { startRound } from '../mutations/startRound.js';
 import { newCombat } from '../mutations/newCombat.js';
+import { copyPreviousNpcs } from '../mutations/copyPreviousNpcs.js';
 import { undo } from '../mutations/undo.js';
 
 function isDm(socket: Socket, dmSessionId: string | null): boolean {
@@ -52,7 +53,7 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
   }));
 
   socket.on(C2S.DM_BOX_UPDATE, wrapDm(socket, pool, io, async (pool, io, data) => {
-    await mutate(pool, io, (client) => updateBox(client, data.boxId, data.label, data.values));
+    await mutate(pool, io, (client) => updateBox(client, data.boxId, data.label, data.values, data.bonus, data.armor));
   }));
 
   socket.on(C2S.DM_BOX_DELETE, wrapDm(socket, pool, io, async (pool, io, data) => {
@@ -89,6 +90,10 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
 
   socket.on(C2S.DM_NEW_COMBAT, wrapDm(socket, pool, io, async (pool, io) => {
     await mutate(pool, io, (client) => newCombat(client));
+  }));
+
+  socket.on(C2S.DM_COPY_PREVIOUS_NPCS, wrapDm(socket, pool, io, async (pool, io) => {
+    await mutate(pool, io, (client) => copyPreviousNpcs(client));
   }));
 
   socket.on(C2S.DM_UNDO, wrapDm(socket, pool, io, async (pool, io) => {

@@ -1,4 +1,4 @@
-export type TokenKind = 'main' | 'custom' | 'bonus' | 'reaction' | 'held' | 'npc';
+export type TokenKind = 'main' | 'custom' | 'bonus' | 'npc';
 
 export type PlayerTokenKind = Exclude<TokenKind, 'npc'>;
 
@@ -8,6 +8,8 @@ export interface ReactionBox {
   values: number[];
   previousValues: number[];
   position: number;
+  bonus: number | null;
+  armor: number | null;
 }
 
 export interface Player {
@@ -33,6 +35,7 @@ export interface GameState {
   reactionBoxes: ReactionBox[];
   players: Player[];
   queue: QueueToken[];
+  previousNpcNames: string[];
 }
 
 export interface SelfInfo {
@@ -67,6 +70,8 @@ export interface BoxUpdatePayload {
   boxId: number;
   label?: string;
   values?: number[];
+  bonus?: number | null;
+  armor?: number | null;
 }
 
 export interface BoxDeletePayload {
@@ -125,6 +130,7 @@ export const C2S = {
   DM_END_ROUND: 'dm:endRound',
   DM_START_ROUND: 'dm:startRound',
   DM_NEW_COMBAT: 'dm:newCombat',
+  DM_COPY_PREVIOUS_NPCS: 'dm:copyPreviousNpcs',
   DM_UNDO: 'dm:undo',
   PLAYER_TOKEN_ADD: 'player:token:add',
   PLAYER_TOKEN_REMOVE: 'player:token:remove',
@@ -140,5 +146,6 @@ export const S2C = {
 
 export const MAX_MAIN_TOKENS = 4;
 export const MAX_CUSTOM_TOKENS = 4;
+// Bonus tokens are unlimited
 export const MAX_NPC_BATCH = 20;
 export const MAX_NAME_LENGTH = 40;

@@ -22,11 +22,12 @@ export async function addPlayerToken(
     if (p.custom_tokens_used >= MAX_CUSTOM_TOKENS) {
       throw new Error(`Custom token limit reached (${MAX_CUSTOM_TOKENS})`);
     }
-  } else {
+  } else if (kind === 'main') {
     if (p.main_tokens_used >= MAX_MAIN_TOKENS) {
       throw new Error(`Main token limit reached (${MAX_MAIN_TOKENS})`);
     }
   }
+  // bonus tokens have no limit
 
   const displayName = kind === 'custom' && customName
     ? `${playerName} - ${customName.trim().slice(0, MAX_NAME_LENGTH)}`
@@ -45,12 +46,13 @@ export async function addPlayerToken(
       'UPDATE players SET custom_tokens_used = custom_tokens_used + 1 WHERE id = $1',
       [playerId]
     );
-  } else {
+  } else if (kind === 'main') {
     await client.query(
       'UPDATE players SET main_tokens_used = main_tokens_used + 1 WHERE id = $1',
       [playerId]
     );
   }
+  // bonus tokens are not counted toward any cap
 
   await client.query('UPDATE game_state SET round_ended = false, version = version + 1 WHERE id = 1');
 

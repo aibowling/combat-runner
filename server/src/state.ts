@@ -3,11 +3,11 @@ import type { Server } from 'socket.io';
 import type { GameState } from './shared/types.js';
 
 export async function loadGameState(client: pg.PoolClient, io?: Server): Promise<GameState> {
-  const gsResult = await client.query('SELECT current_turn, round_ended, round_started FROM game_state WHERE id = 1');
+  const gsResult = await client.query('SELECT current_turn, round_ended, round_started, previous_npc_names FROM game_state WHERE id = 1');
   const gs = gsResult.rows[0];
 
   const boxesResult = await client.query(
-    'SELECT id, label, values, previous_values, position FROM reaction_boxes ORDER BY position'
+    'SELECT id, label, values, previous_values, position, bonus, armor FROM reaction_boxes ORDER BY position'
   );
 
   const playersResult = await client.query(
@@ -36,6 +36,8 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
       values: r.values,
       previousValues: r.previous_values,
       position: r.position,
+      bonus: r.bonus,
+      armor: r.armor,
     })),
     players: playersResult.rows.map(r => ({
       id: r.id,
@@ -51,12 +53,13 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
       playerId: r.player_id,
       completed: r.completed,
     })),
+    previousNpcNames: gs.previous_npc_names ?? [],
   };
 }
 
 export interface DbSnapshot {
   gameState: { current_turn: number; round_ended: boolean; round_started: boolean; dm_session_id: string | null; version: number };
-  reactionBoxes: Array<{ id: number; label: string; values: number[]; previous_values: number[]; position: number }>;
+  reactionBoxes: Array<{ id: number; label: string; values: number[]; previous_values: number[]; position: number; bonus: number | null; armor: number | null }>;
   players: Array<{ id: number; display_name: string; session_id: string; main_tokens_used: number; custom_tokens_used: number; last_seen_turn: number }>;
   tokens: Array<{ id: number; display_name: string; player_id: number | null; kind: string; position: number; completed: boolean }>;
 }
@@ -80,8 +83,8 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
 
   for (const b of snap.reactionBoxes) {
     await client.query(
-      'INSERT INTO reaction_boxes (id, label, values, previous_values, position) VALUES ($1, $2, $3, $4, $5)',
-      [b.id, b.label, b.values, b.previous_values, b.position]
+      'INSERT INTO reaction_boxes (id, label, values, previous_values, position, bonus, armor) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [b.id, b.label, b.values, b.previous_values, b.position, b.bonus, b.armor]
     );
   }
 

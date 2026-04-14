@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useStore } from '../store';
 import { getSocket } from '../socket';
 import { C2S } from '../shared/types';
@@ -11,7 +11,16 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
   const box = useStore((s) => s.boxesById[boxId]);
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState('');
+  const [bonusStr, setBonusStr] = useState('');
+  const [armorStr, setArmorStr] = useState('');
   const socket = getSocket();
+
+  useEffect(() => {
+    if (box) {
+      setBonusStr(box.bonus === null || box.bonus === undefined ? '' : String(box.bonus));
+      setArmorStr(box.armor === null || box.armor === undefined ? '' : String(box.armor));
+    }
+  }, [box?.bonus, box?.armor]);
 
   if (!box) return null;
 
@@ -43,6 +52,20 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
     const newValues = [...box.values];
     newValues[index] = Math.max(1, Math.min(99, newValues[index] + delta));
     socket?.emit(C2S.DM_BOX_UPDATE, { boxId, values: newValues });
+  };
+
+  const saveBonus = () => {
+    const trimmed = bonusStr.trim();
+    const newVal = trimmed === '' ? null : parseInt(trimmed, 10);
+    if (trimmed !== '' && isNaN(newVal as number)) return;
+    socket?.emit(C2S.DM_BOX_UPDATE, { boxId, bonus: newVal });
+  };
+
+  const saveArmor = () => {
+    const trimmed = armorStr.trim();
+    const newVal = trimmed === '' ? null : parseInt(trimmed, 10);
+    if (trimmed !== '' && isNaN(newVal as number)) return;
+    socket?.emit(C2S.DM_BOX_UPDATE, { boxId, armor: newVal });
   };
 
   const deleteBox = () => {
@@ -80,6 +103,43 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
           </div>
         ))}
         <button className="btn btn-small add-value-btn" onClick={addValue}>+ Value</button>
+      </div>
+
+      <div className="box-meta-row">
+        <label className="box-meta-field">
+          <span className="box-meta-label">Bonus</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="-?[0-9]*"
+            placeholder="—"
+            value={bonusStr}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '' || v === '-' || /^-?\d+$/.test(v)) setBonusStr(v);
+            }}
+            onBlur={saveBonus}
+            onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+            className="box-meta-input"
+          />
+        </label>
+        <label className="box-meta-field">
+          <span className="box-meta-label">Armor</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="—"
+            value={armorStr}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '' || /^\d+$/.test(v)) setArmorStr(v);
+            }}
+            onBlur={saveArmor}
+            onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+            className="box-meta-input"
+          />
+        </label>
       </div>
 
       {box.previousValues.length > 0 && (

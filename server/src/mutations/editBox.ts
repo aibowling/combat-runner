@@ -19,7 +19,9 @@ export async function updateBox(
   client: pg.PoolClient,
   boxId: number,
   label?: string,
-  values?: number[]
+  values?: number[],
+  bonus?: number | null,
+  armor?: number | null
 ): Promise<MutationResult> {
   const existing = await client.query('SELECT id FROM reaction_boxes WHERE id = $1', [boxId]);
   if (existing.rows.length === 0) throw new Error('Box not found');
@@ -31,6 +33,14 @@ export async function updateBox(
   if (values !== undefined) {
     const clamped = values.slice(0, 100).map(v => Math.max(1, Math.min(99, Math.floor(v))));
     await client.query('UPDATE reaction_boxes SET values = $1 WHERE id = $2', [clamped, boxId]);
+  }
+  if (bonus !== undefined) {
+    const clampedBonus = bonus === null ? null : Math.max(-99, Math.min(99, Math.floor(bonus)));
+    await client.query('UPDATE reaction_boxes SET bonus = $1 WHERE id = $2', [clampedBonus, boxId]);
+  }
+  if (armor !== undefined) {
+    const clampedArmor = armor === null ? null : Math.max(0, Math.min(99, Math.floor(armor)));
+    await client.query('UPDATE reaction_boxes SET armor = $1 WHERE id = $2', [clampedArmor, boxId]);
   }
 
   await client.query('UPDATE game_state SET version = version + 1 WHERE id = 1');

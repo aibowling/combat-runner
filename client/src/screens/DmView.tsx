@@ -18,24 +18,28 @@ export default function DmView({ onLeave }: Props) {
   const players = Object.values(playersById);
   const queueOrder = useStore((s) => s.queueOrder);
   const queueById = useStore((s) => s.queueById);
+  const previousNpcNames = useStore((s) => s.previousNpcNames);
   const [npcName, setNpcName] = useState('');
-  const [npcCount, setNpcCount] = useState(1);
+  const [npcCount, setNpcCount] = useState<string>('1');
   const [addForPlayerId, setAddForPlayerId] = useState<number | null>(null);
-  const [addForKind, setAddForKind] = useState<string>('main');
+  const [addForKind, setAddForKind] = useState<'main' | 'bonus' | 'custom'>('main');
 
   const socket = getSocket();
 
   const hasPendingTokens = queueOrder.some(id => !queueById[id]?.completed);
+  const parsedNpcCount = parseInt(npcCount, 10);
+  const npcCountValid = !isNaN(parsedNpcCount) && parsedNpcCount >= 1 && parsedNpcCount <= 20;
+  const canAddNpc = npcName.trim().length > 0 && npcCountValid;
 
   const addBox = () => {
     socket?.emit(C2S.DM_BOX_CREATE, { label: `Box ${boxOrder.length + 1}` });
   };
 
   const addNpc = () => {
-    if (!npcName.trim()) return;
-    socket?.emit(C2S.DM_TOKEN_ADD_NPC, { name: npcName.trim(), count: npcCount });
+    if (!canAddNpc) return;
+    socket?.emit(C2S.DM_TOKEN_ADD_NPC, { name: npcName.trim(), count: parsedNpcCount });
     setNpcName('');
-    setNpcCount(1);
+    setNpcCount('1');
   };
 
   const advance = () => {
@@ -56,6 +60,10 @@ export default function DmView({ onLeave }: Props) {
     if (confirm('Start new combat? This will clear ALL tokens, reaction boxes, and reset everything.')) {
       socket?.emit(C2S.DM_NEW_COMBAT, {});
     }
+  };
+
+  const handleCopyPreviousNpcs = () => {
+    socket?.emit(C2S.DM_COPY_PREVIOUS_NPCS, {});
   };
 
   const handleUndo = () => {
@@ -120,29 +128,39 @@ export default function DmView({ onLeave }: Props) {
           <Queue isDm={true} />
 
           <div className="add-section">
-            <h4>Add NPC Tokens</h4>
+            <div className="add-section-header">
+              <h4>Add NPC Tokens</h4>
+              {previousNpcNames.length > 0 && !roundStarted && (
+                <button className="btn btn-small" onClick={handleCopyPreviousNpcs}>
+                  Copy Previous NPCs ({previousNpcNames.length})
+                </button>
+              )}
+            </div>
             <div className="add-npc-form">
               <input
                 type="text"
                 placeholder="NPC name"
                 value={npcName}
                 onChange={(e) => setNpcName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
+                onKeyDown={(e) => e.key === 'Enter' && canAddNpc && addNpc()}
                 maxLength={40}
                 autoCapitalize="off"
                 autoCorrect="off"
                 className="npc-name-input"
               />
               <input
-                type="number"
-                min={1}
-                max={20}
-                value={npcCount}
-                onChange={(e) => setNpcCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                type="text"
                 inputMode="numeric"
+                pattern="[0-9]*"
+                value={npcCount}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || /^\d+$/.test(v)) setNpcCount(v);
+                }}
+                placeholder="#"
                 className="npc-count-input"
               />
-              <button className="btn" onClick={addNpc} disabled={!npcName.trim()}>Add</button>
+              <button className="btn" onClick={addNpc} disabled={!canAddNpc}>Add</button>
             </div>
           </div>
 
@@ -159,11 +177,9 @@ export default function DmView({ onLeave }: Props) {
                     <option key={p.id} value={p.id}>{p.displayName}</option>
                   ))}
                 </select>
-                <select value={addForKind} onChange={(e) => setAddForKind(e.target.value)}>
+                <select value={addForKind} onChange={(e) => setAddForKind(e.target.value as any)}>
                   <option value="main">Main</option>
                   <option value="bonus">Bonus</option>
-                  <option value="reaction">Reaction</option>
-                  <option value="held">Held</option>
                   <option value="custom">Custom</option>
                 </select>
                 <button className="btn" onClick={handleAddForPlayer} disabled={addForPlayerId === null}>

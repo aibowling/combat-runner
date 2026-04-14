@@ -19,6 +19,7 @@ interface Store {
   playersById: Record<number, Player>;
   queueById: Record<number, QueueToken>;
   queueOrder: number[];
+  previousNpcNames: string[];
 
   pendingTokens: PendingToken[];
   optimisticMainUsed: number;
@@ -31,7 +32,7 @@ interface Store {
   setSelf: (self: Store['self']) => void;
   setConnected: (c: boolean) => void;
   applyState: (state: GameState, version: number) => void;
-  addPendingToken: (token: PendingToken, isCustom: boolean) => void;
+  addPendingToken: (token: PendingToken, kind: 'main' | 'custom' | 'bonus') => void;
   clearPendingTokens: () => void;
   dismissTurnToast: () => void;
 }
@@ -48,6 +49,7 @@ export const useStore = create<Store>((set, get) => ({
   playersById: {},
   queueById: {},
   queueOrder: [],
+  previousNpcNames: [],
 
   pendingTokens: [],
   optimisticMainUsed: 0,
@@ -103,6 +105,7 @@ export const useStore = create<Store>((set, get) => ({
       playersById,
       queueById,
       queueOrder,
+      previousNpcNames: state.previousNpcNames ?? [],
       pendingTokens: [],
       optimisticMainUsed,
       optimisticCustomUsed,
@@ -110,10 +113,10 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
 
-  addPendingToken: (token, isCustom) => set((s) => ({
+  addPendingToken: (token, kind) => set((s) => ({
     pendingTokens: [...s.pendingTokens, token],
-    optimisticMainUsed: isCustom ? s.optimisticMainUsed : s.optimisticMainUsed + 1,
-    optimisticCustomUsed: isCustom ? s.optimisticCustomUsed + 1 : s.optimisticCustomUsed,
+    optimisticMainUsed: kind === 'main' ? s.optimisticMainUsed + 1 : s.optimisticMainUsed,
+    optimisticCustomUsed: kind === 'custom' ? s.optimisticCustomUsed + 1 : s.optimisticCustomUsed,
   })),
 
   clearPendingTokens: () => set({ pendingTokens: [] }),
