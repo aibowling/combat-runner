@@ -7,12 +7,6 @@ export async function endRound(client: pg.PoolClient): Promise<MutationResult> {
     throw new Error('Round is not ended yet — tokens still remain');
   }
 
-  // Capture NPC token names so DM can copy them into next round
-  const npcResult = await client.query(
-    "SELECT display_name FROM initiative_tokens WHERE kind = 'npc' ORDER BY position, id"
-  );
-  const npcNames: string[] = npcResult.rows.map((r: any) => r.display_name);
-
   await client.query(`
     UPDATE reaction_boxes
     SET previous_values = values,
@@ -27,8 +21,7 @@ export async function endRound(client: pg.PoolClient): Promise<MutationResult> {
   await client.query('DELETE FROM initiative_tokens');
   await client.query('UPDATE players SET main_tokens_used = 0, custom_tokens_used = 0');
   await client.query(
-    'UPDATE game_state SET current_turn = current_turn + 1, round_ended = false, round_started = false, previous_npc_names = $1, version = version + 1 WHERE id = 1',
-    [npcNames]
+    'UPDATE game_state SET current_turn = current_turn + 1, round_ended = false, round_started = false, version = version + 1 WHERE id = 1'
   );
 
   return { newTurn: true };

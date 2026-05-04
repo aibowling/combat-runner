@@ -10,6 +10,7 @@ export interface ReactionBox {
   position: number;
   bonus: number | null;
   armor: number | null;
+  isNpc: boolean;
 }
 
 export interface Player {
@@ -83,6 +84,10 @@ export interface AddNpcPayload {
   count: number;
 }
 
+export interface AddNpcTokenPayload {
+  boxId: number;
+}
+
 export interface AddForPlayerPayload {
   playerId: number;
   kind: PlayerTokenKind;
@@ -123,7 +128,8 @@ export const C2S = {
   DM_BOX_CREATE: 'dm:box:create',
   DM_BOX_UPDATE: 'dm:box:update',
   DM_BOX_DELETE: 'dm:box:delete',
-  DM_TOKEN_ADD_NPC: 'dm:token:addNpc',
+  DM_NPC_ADD: 'dm:npc:add',
+  DM_NPC_TOKEN_ADD: 'dm:npc:token:add',
   DM_TOKEN_ADD_FOR_PLAYER: 'dm:token:addForPlayer',
   DM_ADVANCE: 'dm:advance',
   DM_TOKEN_REMOVE: 'dm:token:remove',

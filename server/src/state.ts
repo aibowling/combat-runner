@@ -7,7 +7,7 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
   const gs = gsResult.rows[0];
 
   const boxesResult = await client.query(
-    'SELECT id, label, values, previous_values, position, bonus, armor FROM reaction_boxes ORDER BY position'
+    'SELECT id, label, values, previous_values, position, bonus, armor, is_npc FROM reaction_boxes ORDER BY position'
   );
 
   const playersResult = await client.query(
@@ -38,6 +38,7 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
       position: r.position,
       bonus: r.bonus,
       armor: r.armor,
+      isNpc: r.is_npc,
     })),
     players: playersResult.rows.map(r => ({
       id: r.id,
@@ -59,7 +60,7 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
 
 export interface DbSnapshot {
   gameState: { current_turn: number; round_ended: boolean; round_started: boolean; dm_session_id: string | null; version: number };
-  reactionBoxes: Array<{ id: number; label: string; values: number[]; previous_values: number[]; position: number; bonus: number | null; armor: number | null }>;
+  reactionBoxes: Array<{ id: number; label: string; values: number[]; previous_values: number[]; position: number; bonus: number | null; armor: number | null; is_npc: boolean }>;
   players: Array<{ id: number; display_name: string; session_id: string; main_tokens_used: number; custom_tokens_used: number; last_seen_turn: number }>;
   tokens: Array<{ id: number; display_name: string; player_id: number | null; kind: string; position: number; completed: boolean }>;
 }
@@ -83,8 +84,8 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
 
   for (const b of snap.reactionBoxes) {
     await client.query(
-      'INSERT INTO reaction_boxes (id, label, values, previous_values, position, bonus, armor) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [b.id, b.label, b.values, b.previous_values, b.position, b.bonus, b.armor]
+      'INSERT INTO reaction_boxes (id, label, values, previous_values, position, bonus, armor, is_npc) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [b.id, b.label, b.values, b.previous_values, b.position, b.bonus, b.armor, b.is_npc]
     );
   }
 

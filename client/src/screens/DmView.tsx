@@ -11,6 +11,7 @@ interface Props {
 
 export default function DmView({ onLeave }: Props) {
   const boxOrder = useStore((s) => s.boxOrder);
+  const boxesById = useStore((s) => s.boxesById);
   const roundEnded = useStore((s) => s.roundEnded);
   const roundStarted = useStore((s) => s.roundStarted);
   const currentTurn = useStore((s) => s.currentTurn);
@@ -31,15 +32,32 @@ export default function DmView({ onLeave }: Props) {
   const npcCountValid = !isNaN(parsedNpcCount) && parsedNpcCount >= 1 && parsedNpcCount <= 20;
   const canAddNpc = npcName.trim().length > 0 && npcCountValid;
 
+  const npcList = boxOrder
+    .map((id) => boxesById[id])
+    .filter((b): b is NonNullable<typeof b> => !!b && b.isNpc)
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .map((b) => ({
+      id: b.id,
+      label: b.label,
+      pendingTokenCount: queueOrder.reduce((acc, qid) => {
+        const t = queueById[qid];
+        return acc + (t && !t.completed && t.kind === 'npc' && t.displayName === b.label ? 1 : 0);
+      }, 0),
+    }));
+
   const addBox = () => {
     socket?.emit(C2S.DM_BOX_CREATE, { label: `Box ${boxOrder.length + 1}` });
   };
 
   const addNpc = () => {
     if (!canAddNpc) return;
-    socket?.emit(C2S.DM_TOKEN_ADD_NPC, { name: npcName.trim(), count: parsedNpcCount });
+    socket?.emit(C2S.DM_NPC_ADD, { name: npcName.trim(), count: parsedNpcCount });
     setNpcName('');
     setNpcCount('1');
+  };
+
+  const addNpcToken = (boxId: number) => {
+    socket?.emit(C2S.DM_NPC_TOKEN_ADD, { boxId });
   };
 
   const advance = () => {
@@ -136,7 +154,7 @@ export default function DmView({ onLeave }: Props) {
 
           <div className="add-section">
             <div className="add-section-header">
-              <h4>Add NPC Tokens</h4>
+              <h4>Add NPCs</h4>
               {previousNpcNames.length > 0 && !roundStarted && (
                 <button className="btn btn-small" onClick={handleCopyPreviousNpcs}>
                   Copy Previous NPCs ({previousNpcNames.length})
@@ -192,6 +210,26 @@ export default function DmView({ onLeave }: Props) {
                 <button className="btn" onClick={handleAddForPlayer} disabled={addForPlayerId === null}>
                   Add
                 </button>
+              </div>
+            </div>
+          )}
+
+          {npcList.length > 0 && (
+            <div className="add-section">
+              <h4>NPC Tokens</h4>
+              <div className="npc-token-list">
+                {npcList.map((npc) => (
+                  <div key={npc.id} className="npc-token-row">
+                    <span className="npc-token-name">{npc.label}</span>
+                    <span className="npc-token-count">{npc.pendingTokenCount}</span>
+                    <button
+                      className="btn btn-small"
+                      onClick={() => addNpcToken(npc.id)}
+                    >
+                      + Token
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}

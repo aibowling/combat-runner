@@ -49,10 +49,12 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
     : upcomingIds;
 
   // Turns-remaining table — DM-only mid-round view. Sorted alphabetically so
-  // the order doesn't shift as turns are drawn.
+  // the order doesn't shift as turns are drawn. NPCs are grouped by name so
+  // two tokens on the same NPC show as count=2 instead of two rows.
   const turnsTable: TurnsRow[] = (() => {
     const rows: TurnsRow[] = [];
     const seenPlayers = new Set<number>();
+    const npcRowsByName = new Map<string, TurnsRow>();
     const allPending = currentToken ? [currentTokenId!, ...upcomingIds] : pendingQueueTokens;
 
     for (const id of allPending) {
@@ -68,7 +70,20 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
         );
         rows.push({ key: `p${t.playerId}`, name, isNpc: false, count });
       } else {
-        rows.push({ key: `n${t.id}`, name: t.displayName, isNpc: true, count: 1, npcTokenId: t.id });
+        const existing = npcRowsByName.get(t.displayName);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          const row: TurnsRow = {
+            key: `n:${t.displayName}`,
+            name: t.displayName,
+            isNpc: true,
+            count: 1,
+            npcTokenId: t.id,
+          };
+          npcRowsByName.set(t.displayName, row);
+          rows.push(row);
+        }
       }
     }
     rows.sort((a, b) => a.name.localeCompare(b.name));

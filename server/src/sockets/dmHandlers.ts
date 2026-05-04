@@ -3,7 +3,8 @@ import pg from 'pg';
 import { C2S, S2C } from '../shared/types.js';
 import { mutate, clearUndoSnapshot } from '../mutations/mutate.js';
 import { createBox, updateBox, deleteBox } from '../mutations/editBox.js';
-import { addNpcTokens } from '../mutations/addNpcTokens.js';
+import { addNpcs } from '../mutations/addNpcs.js';
+import { addNpcToken } from '../mutations/addNpcToken.js';
 import { addPlayerToken } from '../mutations/addPlayerToken.js';
 import { advanceTurn } from '../mutations/advanceTurn.js';
 import { removeToken } from '../mutations/removeToken.js';
@@ -61,8 +62,12 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
     await mutate(pool, io, (client) => deleteBox(client, data.boxId));
   }));
 
-  socket.on(C2S.DM_TOKEN_ADD_NPC, wrapDm(socket, pool, io, async (pool, io, data) => {
-    await mutate(pool, io, (client) => addNpcTokens(client, data.name, data.count));
+  socket.on(C2S.DM_NPC_ADD, wrapDm(socket, pool, io, async (pool, io, data) => {
+    await mutate(pool, io, (client) => addNpcs(client, data.name, data.count));
+  }));
+
+  socket.on(C2S.DM_NPC_TOKEN_ADD, wrapDm(socket, pool, io, async (pool, io, data) => {
+    await mutate(pool, io, (client) => addNpcToken(client, data.boxId));
   }));
 
   socket.on(C2S.DM_TOKEN_ADD_FOR_PLAYER, wrapDm(socket, pool, io, async (pool, io, data) => {
