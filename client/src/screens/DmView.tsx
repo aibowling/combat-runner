@@ -62,6 +62,12 @@ export default function DmView({ onLeave }: Props) {
     }
   };
 
+  const handleNewSession = () => {
+    if (!confirm('NEW SESSION: this will delete ALL players, tokens, reaction boxes, and combat state. Everyone will be kicked back to the landing screen. Continue?')) return;
+    if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+    socket?.emit(C2S.DM_NEW_SESSION, {});
+  };
+
   const handleCopyPreviousNpcs = () => {
     socket?.emit(C2S.DM_COPY_PREVIOUS_NPCS, {});
   };
@@ -85,6 +91,7 @@ export default function DmView({ onLeave }: Props) {
         <div className="dm-header-actions">
           <button className="btn btn-ghost" onClick={handleUndo}>Undo</button>
           <button className="btn btn-danger btn-small" onClick={handleNewCombat}>New Combat</button>
+          <button className="btn btn-danger btn-small" onClick={handleNewSession}>New Session</button>
           <button className="btn btn-ghost btn-small" onClick={onLeave}>Leave</button>
         </div>
       </div>

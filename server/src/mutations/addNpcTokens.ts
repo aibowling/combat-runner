@@ -1,6 +1,7 @@
 import pg from 'pg';
 import type { MutationResult } from './mutate.js';
 import { getTopPlayerId } from './mutate.js';
+import { createBoxForNpc } from './editBox.js';
 import { MAX_NPC_BATCH, MAX_NAME_LENGTH } from '../shared/types.js';
 
 export async function addNpcTokens(
@@ -22,6 +23,7 @@ export async function addNpcTokens(
       'INSERT INTO initiative_tokens (display_name, player_id, kind, position) VALUES ($1, NULL, $2, $3)',
       [displayName, 'npc', nextPos++]
     );
+    await createBoxForNpc(client, displayName);
   }
 
   await client.query('UPDATE game_state SET round_ended = false, version = version + 1 WHERE id = 1');

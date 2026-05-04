@@ -1,7 +1,7 @@
 import type { Socket, Server } from 'socket.io';
 import pg from 'pg';
-import { C2S } from '../shared/types.js';
-import { mutate } from '../mutations/mutate.js';
+import { C2S, S2C } from '../shared/types.js';
+import { mutate, clearUndoSnapshot } from '../mutations/mutate.js';
 import { createBox, updateBox, deleteBox } from '../mutations/editBox.js';
 import { addNpcTokens } from '../mutations/addNpcTokens.js';
 import { addPlayerToken } from '../mutations/addPlayerToken.js';
@@ -10,6 +10,7 @@ import { removeToken } from '../mutations/removeToken.js';
 import { endRound } from '../mutations/endRound.js';
 import { startRound } from '../mutations/startRound.js';
 import { newCombat } from '../mutations/newCombat.js';
+import { newSession } from '../mutations/newSession.js';
 import { copyPreviousNpcs } from '../mutations/copyPreviousNpcs.js';
 import { undo } from '../mutations/undo.js';
 
@@ -90,6 +91,12 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
 
   socket.on(C2S.DM_NEW_COMBAT, wrapDm(socket, pool, io, async (pool, io) => {
     await mutate(pool, io, (client) => newCombat(client));
+  }));
+
+  socket.on(C2S.DM_NEW_SESSION, wrapDm(socket, pool, io, async (pool, io) => {
+    await mutate(pool, io, (client) => newSession(client));
+    clearUndoSnapshot();
+    io.emit(S2C.SESSION_RESET, {});
   }));
 
   socket.on(C2S.DM_COPY_PREVIOUS_NPCS, wrapDm(socket, pool, io, async (pool, io) => {

@@ -70,6 +70,11 @@ export function connectSocket() {
     useStore.getState().setSelf({ ...current, ...data });
   });
 
+  socket.on(S2C.SESSION_RESET, () => {
+    localStorage.removeItem('drews-session');
+    window.location.reload();
+  });
+
   socket.on('error', (data: { code: string; message: string }) => {
     console.error('Server error:', data.code, data.message);
   });

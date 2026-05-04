@@ -1,5 +1,6 @@
 import pg from 'pg';
 import type { MutationResult } from './mutate.js';
+import { createBoxForNpc } from './editBox.js';
 
 export async function copyPreviousNpcs(client: pg.PoolClient): Promise<MutationResult> {
   const gsResult = await client.query('SELECT previous_npc_names FROM game_state WHERE id = 1');
@@ -17,6 +18,7 @@ export async function copyPreviousNpcs(client: pg.PoolClient): Promise<MutationR
       'INSERT INTO initiative_tokens (display_name, player_id, kind, position) VALUES ($1, NULL, $2, $3)',
       [name, 'npc', nextPos++]
     );
+    await createBoxForNpc(client, name);
   }
 
   await client.query('UPDATE game_state SET version = version + 1 WHERE id = 1');

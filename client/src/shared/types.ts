@@ -130,6 +130,7 @@ export const C2S = {
   DM_END_ROUND: 'dm:endRound',
   DM_START_ROUND: 'dm:startRound',
   DM_NEW_COMBAT: 'dm:newCombat',
+  DM_NEW_SESSION: 'dm:newSession',
   DM_COPY_PREVIOUS_NPCS: 'dm:copyPreviousNpcs',
   DM_UNDO: 'dm:undo',
   PLAYER_TOKEN_ADD: 'player:token:add',
@@ -141,6 +142,7 @@ export const S2C = {
   TURN_NEW: 'turn:new',
   SELF_UPDATE: 'self:update',
   YOUR_TURN: 'your:turn',
+  SESSION_RESET: 'session:reset',
   ERROR: 'error',
 } as const;
 

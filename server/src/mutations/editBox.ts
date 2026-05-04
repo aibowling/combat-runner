@@ -4,15 +4,24 @@ import { MAX_NAME_LENGTH } from '../shared/types.js';
 
 export async function createBox(client: pg.PoolClient, label: string): Promise<MutationResult> {
   const sanitized = label.trim().slice(0, MAX_NAME_LENGTH) || 'New Box';
+  await insertBox(client, sanitized);
+  await client.query('UPDATE game_state SET version = version + 1 WHERE id = 1');
+  return {};
+}
+
+export async function createBoxForNpc(client: pg.PoolClient, npcName: string): Promise<void> {
+  const sanitized = npcName.trim().slice(0, MAX_NAME_LENGTH) || 'NPC';
+  await insertBox(client, sanitized);
+}
+
+async function insertBox(client: pg.PoolClient, label: string): Promise<void> {
   const maxPos = await client.query('SELECT COALESCE(MAX(position), 0) AS max FROM reaction_boxes');
   const val1 = Math.floor(Math.random() * 20) + 1;
   const val2 = Math.floor(Math.random() * 20) + 1;
   await client.query(
     'INSERT INTO reaction_boxes (label, values, previous_values, position) VALUES ($1, $2, $3, $4)',
-    [sanitized, `{${val1},${val2}}`, '{}', maxPos.rows[0].max + 1]
+    [label, `{${val1},${val2}}`, '{}', maxPos.rows[0].max + 1]
   );
-  await client.query('UPDATE game_state SET version = version + 1 WHERE id = 1');
-  return {};
 }
 
 export async function updateBox(

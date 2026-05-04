@@ -79,23 +79,22 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
             let playerRow = await client.query('SELECT * FROM players WHERE session_id = $1', [sessionId]);
 
             if (playerRow.rows.length === 0) {
-              let displayName = playerName;
-              let suffix = 1;
-              while (true) {
-                try {
+              try {
+                const result = await client.query(
+                  'INSERT INTO players (display_name, session_id) VALUES ($1, $2) RETURNING *',
+                  [playerName, sessionId]
+                );
+                playerRow = result;
+              } catch (err: any) {
+                if (err.code === '23505' && err.constraint?.includes('display_name')) {
+                  // Name takeover — trusted friend group, reassign existing row to this session
                   const result = await client.query(
-                    'INSERT INTO players (display_name, session_id) VALUES ($1, $2) RETURNING *',
-                    [displayName, sessionId]
+                    'UPDATE players SET session_id = $1, last_seen = now() WHERE display_name = $2 RETURNING *',
+                    [sessionId, playerName]
                   );
                   playerRow = result;
-                  break;
-                } catch (err: any) {
-                  if (err.code === '23505' && err.constraint?.includes('display_name')) {
-                    suffix++;
-                    displayName = `${playerName} (${suffix})`;
-                  } else {
-                    throw err;
-                  }
+                } else {
+                  throw err;
                 }
               }
             } else {
