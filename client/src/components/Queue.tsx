@@ -22,6 +22,7 @@ interface TurnsRow {
   name: string;
   isNpc: boolean;
   count: number;
+  npcTokenId?: number;
 }
 
 export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
@@ -47,8 +48,8 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
     ? upcomingIds.filter(id => queueById[id]?.kind !== 'npc')
     : upcomingIds;
 
-  // Turns-remaining table — used mid-round for the player view (no order leaked)
-  // and rendered next to player names in the DM view (#8).
+  // Turns-remaining table — DM-only mid-round view. Sorted alphabetically so
+  // the order doesn't shift as turns are drawn.
   const turnsTable: TurnsRow[] = (() => {
     const rows: TurnsRow[] = [];
     const seenPlayers = new Set<number>();
@@ -67,9 +68,10 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
         );
         rows.push({ key: `p${t.playerId}`, name, isNpc: false, count });
       } else {
-        rows.push({ key: `n${t.id}`, name: t.displayName, isNpc: true, count: 1 });
+        rows.push({ key: `n${t.id}`, name: t.displayName, isNpc: true, count: 1, npcTokenId: t.id });
       }
     }
+    rows.sort((a, b) => a.name.localeCompare(b.name));
     return rows;
   })();
 
@@ -89,28 +91,9 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
         </>
       )}
 
-      {/* Mid-round: DM sees full upcoming list (with kill buttons on NPCs).
-          Players only see the turns-remaining table — no order leak. */}
-      {roundStarted && isDm && upcomingIds.length > 0 && (
-        <>
-          <div className="queue-section-label">Upcoming ({upcomingIds.length})</div>
-          {upcomingIds.map((id) => {
-            const token = queueById[id];
-            if (!token) return null;
-            return (
-              <div key={id} className={`queue-token ${token.kind === 'npc' ? 'queue-token-npc' : ''}`}>
-                <span className="token-kind-badge">{KIND_LABELS[token.kind] || token.kind}</span>
-                <span className="token-name">{token.displayName}</span>
-                <button className="btn btn-ghost btn-tiny token-remove" onClick={() => removeToken(id)}>
-                  {token.kind === 'npc' ? 'Kill' : '×'}
-                </button>
-              </div>
-            );
-          })}
-        </>
-      )}
-
-      {roundStarted && turnsTable.length > 0 && (
+      {/* Mid-round turns-remaining table — DM only. Sorted alphabetically and
+          stable across turn advances. NPC rows get a Kill button. */}
+      {roundStarted && isDm && turnsTable.length > 0 && (
         <>
           <div className="queue-section-label">Turns remaining</div>
           <div className="turns-remaining-table">
@@ -120,6 +103,14 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
                   {row.name}
                 </span>
                 <span className="turns-remaining-count">{row.count}</span>
+                {row.isNpc && row.npcTokenId !== undefined && (
+                  <button
+                    className="btn btn-ghost btn-tiny turns-remaining-kill"
+                    onClick={() => removeToken(row.npcTokenId!)}
+                  >
+                    Kill
+                  </button>
+                )}
               </div>
             ))}
           </div>

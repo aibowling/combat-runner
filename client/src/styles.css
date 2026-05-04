@@ -456,3 +456,9 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   min-width: 20px;
   text-align: right;
 }
+.turns-remaining-kill {
+  margin-left: 8px;
+  color: var(--danger);
+  font-size: 12px;
+}
+.turns-remaining-kill:hover { background: rgba(231, 76, 60, 0.1); }
