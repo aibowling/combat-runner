@@ -17,9 +17,17 @@ const KIND_LABELS: Record<string, string> = {
   npc: 'NPC',
 };
 
+interface TurnsRow {
+  key: string;
+  name: string;
+  isNpc: boolean;
+  count: number;
+}
+
 export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
   const queueOrder = useStore((s) => s.queueOrder);
   const queueById = useStore((s) => s.queueById);
+  const playersById = useStore((s) => s.playersById);
   const pendingTokens = useStore((s) => s.pendingTokens);
   const selfPlayerId = useStore((s) => s.self.playerId);
   const roundStarted = useStore((s) => s.roundStarted);
@@ -31,28 +39,44 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
 
   const completedTokens = queueOrder.filter(id => queueById[id]?.completed);
   const pendingQueueTokens = queueOrder.filter(id => !queueById[id]?.completed);
-  const currentTokenId = pendingQueueTokens[0] ?? null;
+  const currentTokenId = roundStarted ? (pendingQueueTokens[0] ?? null) : null;
   const currentToken = currentTokenId ? queueById[currentTokenId] : null;
+  const upcomingIds = roundStarted ? pendingQueueTokens.slice(1) : pendingQueueTokens;
+
+  const visibleUpcomingForPreRound = !isDm
+    ? upcomingIds.filter(id => queueById[id]?.kind !== 'npc')
+    : upcomingIds;
+
+  // Turns-remaining table — used mid-round for the player view (no order leaked)
+  // and rendered next to player names in the DM view (#8).
+  const turnsTable: TurnsRow[] = (() => {
+    const rows: TurnsRow[] = [];
+    const seenPlayers = new Set<number>();
+    const allPending = currentToken ? [currentTokenId!, ...upcomingIds] : pendingQueueTokens;
+
+    for (const id of allPending) {
+      const t = queueById[id];
+      if (!t) continue;
+      if (t.playerId !== null) {
+        if (seenPlayers.has(t.playerId)) continue;
+        seenPlayers.add(t.playerId);
+        const name = playersById[t.playerId]?.displayName ?? 'Unknown';
+        const count = allPending.reduce(
+          (acc, pid) => acc + (queueById[pid]?.playerId === t.playerId ? 1 : 0),
+          0
+        );
+        rows.push({ key: `p${t.playerId}`, name, isNpc: false, count });
+      } else {
+        rows.push({ key: `n${t.id}`, name: t.displayName, isNpc: true, count: 1 });
+      }
+    }
+    return rows;
+  })();
 
   return (
     <div className="queue">
-      {/* Past turns */}
-      {completedTokens.length > 0 && (
-        <div className="queue-section-label">Past turns</div>
-      )}
-      {completedTokens.map((id) => {
-        const token = queueById[id];
-        if (!token) return null;
-        return (
-          <div key={id} className="queue-token queue-token-completed">
-            <span className="token-kind-badge">{KIND_LABELS[token.kind] || token.kind}</span>
-            <span className="token-name">{token.displayName}</span>
-          </div>
-        );
-      })}
-
-      {/* Current turn */}
-      {currentToken && roundStarted && (
+      {/* Current turn (top) */}
+      {currentToken && (
         <>
           <div className="queue-section-label">Current turn</div>
           <div className="queue-token queue-token-active">
@@ -65,11 +89,48 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
         </>
       )}
 
-      {/* Upcoming — DM only, before round starts show all pending */}
-      {!roundStarted && pendingQueueTokens.length > 0 && (
+      {/* Mid-round: DM sees full upcoming list (with kill buttons on NPCs).
+          Players only see the turns-remaining table — no order leak. */}
+      {roundStarted && isDm && upcomingIds.length > 0 && (
         <>
-          <div className="queue-section-label">Tokens added ({pendingQueueTokens.length})</div>
-          {pendingQueueTokens.map((id) => {
+          <div className="queue-section-label">Upcoming ({upcomingIds.length})</div>
+          {upcomingIds.map((id) => {
+            const token = queueById[id];
+            if (!token) return null;
+            return (
+              <div key={id} className={`queue-token ${token.kind === 'npc' ? 'queue-token-npc' : ''}`}>
+                <span className="token-kind-badge">{KIND_LABELS[token.kind] || token.kind}</span>
+                <span className="token-name">{token.displayName}</span>
+                <button className="btn btn-ghost btn-tiny token-remove" onClick={() => removeToken(id)}>
+                  {token.kind === 'npc' ? 'Kill' : '×'}
+                </button>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {roundStarted && turnsTable.length > 0 && (
+        <>
+          <div className="queue-section-label">Turns remaining</div>
+          <div className="turns-remaining-table">
+            {turnsTable.map((row) => (
+              <div key={row.key} className="turns-remaining-row">
+                <span className={`turns-remaining-name ${row.isNpc ? 'turns-remaining-npc' : ''}`}>
+                  {row.name}
+                </span>
+                <span className="turns-remaining-count">{row.count}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Pre-round: full pending list. Players don't see NPC tokens. */}
+      {!roundStarted && visibleUpcomingForPreRound.length > 0 && (
+        <>
+          <div className="queue-section-label">Tokens added ({visibleUpcomingForPreRound.length})</div>
+          {visibleUpcomingForPreRound.map((id) => {
             const token = queueById[id];
             if (!token) return null;
             const isOwn = token.playerId === selfPlayerId && selfPlayerId != null;
@@ -89,14 +150,21 @@ export default memo(function Queue({ isDm, onRemoveOwn }: Props) {
         </>
       )}
 
-      {/* After round started, show remaining count for non-DM */}
-      {roundStarted && pendingQueueTokens.length > 1 && !isDm && (
-        <div className="queue-remaining">{pendingQueueTokens.length - 1} more turn{pendingQueueTokens.length - 1 !== 1 ? 's' : ''} remaining</div>
-      )}
-
-      {/* DM sees remaining count too */}
-      {roundStarted && pendingQueueTokens.length > 1 && isDm && (
-        <div className="queue-remaining">{pendingQueueTokens.length - 1} more in queue</div>
+      {/* Past turns (bottom) */}
+      {completedTokens.length > 0 && (
+        <>
+          <div className="queue-section-label">Past turns</div>
+          {completedTokens.map((id) => {
+            const token = queueById[id];
+            if (!token) return null;
+            return (
+              <div key={id} className="queue-token queue-token-completed">
+                <span className="token-kind-badge">{KIND_LABELS[token.kind] || token.kind}</span>
+                <span className="token-name">{token.displayName}</span>
+              </div>
+            );
+          })}
+        </>
       )}
 
       {pendingTokens.map((pt) => (

@@ -54,6 +54,12 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
     socket?.emit(C2S.DM_BOX_UPDATE, { boxId, values: newValues });
   };
 
+  const rerollValue = (index: number) => {
+    const newValues = [...box.values];
+    newValues[index] = Math.floor(Math.random() * 20) + 1;
+    socket?.emit(C2S.DM_BOX_UPDATE, { boxId, values: newValues });
+  };
+
   const saveBonus = () => {
     const trimmed = bonusStr.trim();
     const newVal = trimmed === '' ? null : parseInt(trimmed, 10);
@@ -97,7 +103,16 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
         {box.values.map((v, i) => (
           <div key={i} className={`value-chip ${v === maxVal ? 'value-chip-max' : ''}`}>
             <button className="adj-btn" onClick={() => adjustValue(i, -1)}>−</button>
-            <span className="value-num">{v}</span>
+            <button
+              type="button"
+              className="value-num value-num-reroll"
+              onClick={() => rerollValue(i)}
+              title="Click to reroll"
+              aria-label={`Reroll ${v}`}
+            >
+              <span className="value-num-text">{v}</span>
+              <span className="value-num-hint">reroll</span>
+            </button>
             <button className="adj-btn" onClick={() => adjustValue(i, 1)}>+</button>
             <button className="adj-btn remove-btn" onClick={() => removeValue(i)}>×</button>
           </div>

@@ -99,10 +99,33 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
                 }
               }
             } else {
-              await client.query(
-                'UPDATE players SET last_seen = now() WHERE id = $1',
-                [playerRow.rows[0].id]
-              );
+              const existingName = playerRow.rows[0].display_name;
+              if (existingName !== playerName) {
+                let displayName = playerName;
+                let suffix = 1;
+                while (true) {
+                  try {
+                    const result = await client.query(
+                      'UPDATE players SET display_name = $1, last_seen = now() WHERE id = $2 RETURNING *',
+                      [displayName, playerRow.rows[0].id]
+                    );
+                    playerRow = result;
+                    break;
+                  } catch (err: any) {
+                    if (err.code === '23505' && err.constraint?.includes('display_name')) {
+                      suffix++;
+                      displayName = `${playerName} (${suffix})`;
+                    } else {
+                      throw err;
+                    }
+                  }
+                }
+              } else {
+                await client.query(
+                  'UPDATE players SET last_seen = now() WHERE id = $1',
+                  [playerRow.rows[0].id]
+                );
+              }
             }
 
             const player = playerRow.rows[0];

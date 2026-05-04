@@ -17,13 +17,13 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const session = await initSession();
+        await initSession();
 
         connectSocket();
 
         const stored = localStorage.getItem('drews-session');
-        if (session.role || stored) {
-          const info = session.role ? session : JSON.parse(stored!);
+        if (stored) {
+          const info = JSON.parse(stored);
           sendHello(
             { role: info.role, name: info.name },
             (ack) => {
