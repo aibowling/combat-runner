@@ -2,6 +2,7 @@ import pg from 'pg';
 import type { MutationResult } from './mutate.js';
 import { bumpVersion } from './mutate.js';
 import { MAX_NAME_LENGTH, MAX_NPC_BATCH } from '../shared/types.js';
+import { createBoxForNpc, deleteBoxForNpc } from './editBox.js';
 
 export async function addNpcs(
   client: pg.PoolClient,
@@ -23,6 +24,7 @@ export async function addNpcs(
   for (let i = 0; i < n; i++) {
     const label = n === 1 && offset === 0 ? clean : `${clean} ${offset + i + 1}`;
     await client.query('INSERT INTO npcs (name, position) VALUES ($1, $2)', [label, ++pos]);
+    await createBoxForNpc(client, label);
   }
 
   await bumpVersion(client);
@@ -30,8 +32,9 @@ export async function addNpcs(
 }
 
 export async function removeNpc(client: pg.PoolClient, npcId: number): Promise<MutationResult> {
-  const { rowCount } = await client.query('DELETE FROM npcs WHERE id = $1', [npcId]);
-  if (!rowCount) throw new Error('Enemy not found');
+  const { rows } = await client.query('DELETE FROM npcs WHERE id = $1 RETURNING name', [npcId]);
+  if (rows.length === 0) throw new Error('Enemy not found');
+  await deleteBoxForNpc(client, rows[0].name);
   await bumpVersion(client);
   return {};
 }
@@ -46,6 +49,7 @@ export async function copyPreviousNpcs(client: pg.PoolClient): Promise<MutationR
 
   for (const name of names) {
     await client.query('INSERT INTO npcs (name, position) VALUES ($1, $2)', [name, ++pos]);
+    await createBoxForNpc(client, name);
   }
 
   await bumpVersion(client);

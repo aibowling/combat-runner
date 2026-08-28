@@ -9,6 +9,8 @@ import { advanceWedge, stepBack } from '../mutations/advanceWedge.js';
 import { endRound } from '../mutations/endRound.js';
 import { reveal } from '../mutations/reveal.js';
 import { addNpcs, removeNpc, copyPreviousNpcs } from '../mutations/npcs.js';
+import { createBox, updateBox, deleteBox } from '../mutations/editBox.js';
+import { repeatPreviousChips } from '../mutations/repeatChips.js';
 import { newCombat } from '../mutations/newCombat.js';
 import { newSession } from '../mutations/newSession.js';
 import { undo } from '../mutations/undo.js';
@@ -49,6 +51,10 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
   socket.removeAllListeners(C2S.DM_NPC_ADD);
   socket.removeAllListeners(C2S.DM_NPC_REMOVE);
   socket.removeAllListeners(C2S.DM_COPY_PREVIOUS_NPCS);
+  socket.removeAllListeners(C2S.DM_REPEAT_CHIPS);
+  socket.removeAllListeners(C2S.DM_BOX_CREATE);
+  socket.removeAllListeners(C2S.DM_BOX_UPDATE);
+  socket.removeAllListeners(C2S.DM_BOX_DELETE);
   socket.removeAllListeners(C2S.DM_REVEAL);
   socket.removeAllListeners(C2S.DM_ROLL_ENTRY);
   socket.removeAllListeners(C2S.DM_SET_ENTRY);
@@ -81,6 +87,26 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
 
   socket.on(C2S.DM_COPY_PREVIOUS_NPCS, wrapDm(socket, pool, io, async (pool, io) => {
     await mutate(pool, io, (client) => copyPreviousNpcs(client));
+  }));
+
+  socket.on(C2S.DM_REPEAT_CHIPS, wrapDm(socket, pool, io, async (pool, io) => {
+    await mutate(pool, io, (client) => repeatPreviousChips(client));
+  }));
+
+  socket.on(C2S.DM_BOX_CREATE, wrapDm(socket, pool, io, async (pool, io, data) => {
+    await mutate(pool, io, (client) => createBox(client, data?.label));
+  }));
+
+  socket.on(C2S.DM_BOX_UPDATE, wrapDm(socket, pool, io, async (pool, io, data) => {
+    if (typeof data?.boxId !== 'number') throw new Error('Which box?');
+    await mutate(pool, io, (client) =>
+      updateBox(client, data.boxId, data.label, data.values, data.bonus, data.armor)
+    );
+  }));
+
+  socket.on(C2S.DM_BOX_DELETE, wrapDm(socket, pool, io, async (pool, io, data) => {
+    if (typeof data?.boxId !== 'number') throw new Error('Which box?');
+    await mutate(pool, io, (client) => deleteBox(client, data.boxId));
   }));
 
   socket.on(C2S.DM_REVEAL, wrapDm(socket, pool, io, async (pool, io) => {

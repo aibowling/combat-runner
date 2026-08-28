@@ -1,12 +1,19 @@
 import pg from 'pg';
 import type { Server } from 'socket.io';
-import type { GameState, Chip, Phase } from './shared/types.js';
+import type { GameState, Chip, Phase, ReactionBox } from './shared/types.js';
 
 export async function loadGameState(client: pg.PoolClient, io?: Server): Promise<GameState> {
   const gsResult = await client.query(
-    'SELECT current_turn, phase, entry_wedge, step_index, revealed, previous_npc_names FROM game_state WHERE id = 1'
+    `SELECT current_turn, phase, entry_wedge, step_index, revealed,
+            previous_npc_names, previous_chips
+       FROM game_state WHERE id = 1`
   );
   const gs = gsResult.rows[0];
+
+  const boxesResult = await client.query(
+    `SELECT id, label, values, previous_values, bonus, armor, is_npc, position
+       FROM reaction_boxes ORDER BY position, id`
+  );
 
   const playersResult = await client.query(
     'SELECT id, display_name, session_id, locked FROM players ORDER BY id'
@@ -66,6 +73,19 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
     chips,
     hiddenChipCount: 0,
     previousNpcNames: gs.previous_npc_names ?? [],
+    reactionBoxes: boxesResult.rows.map(
+      (r: any): ReactionBox => ({
+        id: r.id,
+        label: r.label,
+        values: r.values ?? [],
+        previousValues: r.previous_values ?? [],
+        bonus: r.bonus,
+        armor: r.armor,
+        isNpc: r.is_npc,
+        position: r.position,
+      })
+    ),
+    previousChipCount: (gs.previous_chips ?? []).length,
   };
 }
 
@@ -104,6 +124,7 @@ export interface DbSnapshot {
     revealed: boolean;
     dm_session_id: string | null;
     previous_npc_names: string[];
+    previous_chips: unknown;
   };
   players: Array<{ id: number; locked: boolean }>;
   npcs: Array<{ id: number; name: string; position: number }>;
@@ -116,6 +137,16 @@ export interface DbSnapshot {
     note: string | null;
     resolved: boolean;
   }>;
+  boxes: Array<{
+    id: number;
+    label: string;
+    values: number[];
+    previous_values: number[];
+    bonus: number | null;
+    armor: number | null;
+    is_npc: boolean;
+    position: number;
+  }>;
 }
 
 export async function captureSnapshot(client: pg.PoolClient): Promise<DbSnapshot> {
@@ -123,17 +154,20 @@ export async function captureSnapshot(client: pg.PoolClient): Promise<DbSnapshot
   const players = (await client.query('SELECT id, locked FROM players ORDER BY id')).rows;
   const npcs = (await client.query('SELECT id, name, position FROM npcs ORDER BY id')).rows;
   const chips = (await client.query('SELECT * FROM wheel_chips ORDER BY id')).rows;
-  return { gameState: gs, players, npcs, chips };
+  const boxes = (await client.query('SELECT * FROM reaction_boxes ORDER BY id')).rows;
+  return { gameState: gs, players, npcs, chips, boxes };
 }
 
 export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): Promise<void> {
   await client.query('DELETE FROM wheel_chips');
   await client.query('DELETE FROM npcs');
+  await client.query('DELETE FROM reaction_boxes');
 
   await client.query(
     `UPDATE game_state
         SET current_turn = $1, phase = $2, entry_wedge = $3, step_index = $4,
-            revealed = $5, previous_npc_names = $6, version = version + 1
+            revealed = $5, previous_npc_names = $6, previous_chips = $7,
+            version = version + 1
       WHERE id = 1`,
     [
       snap.gameState.current_turn,
@@ -142,8 +176,17 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
       snap.gameState.step_index,
       snap.gameState.revealed,
       snap.gameState.previous_npc_names ?? [],
+      JSON.stringify(snap.gameState.previous_chips ?? []),
     ]
   );
+
+  for (const b of snap.boxes ?? []) {
+    await client.query(
+      `INSERT INTO reaction_boxes (id, label, values, previous_values, bonus, armor, is_npc, position)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [b.id, b.label, b.values, b.previous_values, b.bonus, b.armor, b.is_npc, b.position]
+    );
+  }
 
   for (const n of snap.npcs) {
     await client.query('INSERT INTO npcs (id, name, position) VALUES ($1, $2, $3)', [
@@ -170,5 +213,8 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
   );
   await client.query(
     "SELECT setval('wheel_chips_id_seq', COALESCE((SELECT MAX(id) FROM wheel_chips), 0) + 1, false)"
+  );
+  await client.query(
+    "SELECT setval('reaction_boxes_id_seq', COALESCE((SELECT MAX(id) FROM reaction_boxes), 0) + 1, false)"
   );
 }

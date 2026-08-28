@@ -10,7 +10,7 @@ export default function Landing({ onJoin, error }: Props) {
 
   return (
     <div className="landing">
-      <h1>The Wheel</h1>
+      <h1>The Clock</h1>
       <p className="subtitle">Terra initiative tracker</p>
 
       <div className="landing-actions">

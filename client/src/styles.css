@@ -487,73 +487,114 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
 }
 
 /* ================================================================== *
- *  THE WHEEL
- *  The wheel keeps its own dark disc regardless of page theme — it is
- *  the focal point, and the chip colours come off the physical set.
+ *  THE CLOCK
+ *  A brass-cased dial with an ivory face. It keeps its own palette
+ *  regardless of page theme — it is the focal point, and the chip
+ *  colours come off the physical set.
  * ================================================================== */
 
-.wheel {
+.clock {
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
 }
-.wheel svg { width: 100%; height: auto; display: block; }
+.clock svg { width: 100%; height: auto; display: block; }
 
-.wheel-rim { fill: #15222a; stroke: #2c4350; stroke-width: 1; }
-.wheel-hub { fill: #1d2f39; stroke: #2c4350; }
+.clock-case { fill: #8a6d3f; }
+.clock-bezel { fill: #c9a468; }
+.clock-dial { fill: #f2ece0; }
 
-.wedge {
-  stroke: #15222a;
-  stroke-width: 1.5;
-  opacity: 0.85;
+.clock-tick { stroke: #2b2620; stroke-width: 2; opacity: 0.75; }
+.clock-subtick { stroke: #2b2620; stroke-width: 0.8; opacity: 0.3; }
+
+.hour-band {
+  stroke: #f2ece0;
+  stroke-width: 1;
+  opacity: 0.62;
   transition: opacity 0.18s ease, stroke 0.18s ease;
 }
-.wedge-dim { opacity: 0.24; }
-.wedge-live { cursor: pointer; }
-.wedge-live:hover, .wedge-live:focus-visible { opacity: 1; outline: none; }
-.wedge-live:focus-visible { stroke: #c9963f; stroke-width: 3; }
-.wedge-current { opacity: 1; stroke: #c9963f; stroke-width: 2.5; }
+.hour-dim .hour-band { opacity: 0.18; }
+.hour-dim .hour-num { opacity: 0.3; }
+.hour-live .hour-band { cursor: pointer; opacity: 0.78; }
+.hour-live .hour-band:hover { opacity: 1; }
+.hour-live .hour-band:focus-visible {
+  outline: none;
+  stroke: #8a6d3f;
+  stroke-width: 3;
+  opacity: 1;
+}
+.hour-current .hour-band { opacity: 1; stroke: #8a6d3f; stroke-width: 2.5; }
 
-.wedge-num {
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: 13px;
+.hour-num {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 19px;
   font-weight: 600;
-  fill: #101a20;
-  opacity: 0.7;
+  fill: #2b2620;
   pointer-events: none;
 }
-.wedge-special {
+
+.hour-label {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 8.5px;
   letter-spacing: 1.4px;
   font-weight: 600;
-  fill: #101a20;
+  fill: #2b2620;
+  opacity: 0.5;
   pointer-events: none;
 }
-.chip-letter {
+
+.chip-face {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   pointer-events: none;
 }
 .chip { animation: chip-pop 0.18s ease-out; }
 .chip-resolved { opacity: 0.32; }
 @keyframes chip-pop { from { opacity: 0; } to { opacity: 1; } }
 
-.hub-small {
+.chip-overflow {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: 9.5px;
-  letter-spacing: 2.4px;
-  fill: #7f8e96;
+  font-size: 10px;
+  font-weight: 700;
+  fill: #2b2620;
+  opacity: 0.55;
+  pointer-events: none;
 }
-.hub-big { font-size: 42px; font-weight: 700; fill: #c9963f; }
-.hub-big-empty { fill: #2c4350; }
 
-.wheel-pointer { transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1); }
-.wheel-pointer path { fill: #c9963f; }
+.clock-hand {
+  transition: transform 0.55s cubic-bezier(0.34, 0.02, 0.2, 1);
+  pointer-events: none;
+}
+.clock-hand path, .clock-hand circle { fill: #2b2620; }
+.clock-pivot { fill: #8a6d3f; stroke: #2b2620; stroke-width: 1; pointer-events: none; }
+.clock-pivot-cap { fill: #f2ece0; pointer-events: none; }
+
+/* Engraved plate under the dial, where a clock would carry its maker's name. */
+.clock-plate {
+  max-width: 520px;
+  margin: 10px auto 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+}
+.plate-label {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.plate-value { font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 600; }
+.plate-value-empty { color: var(--text-muted); font-style: italic; font-size: 15px; }
+.plate-hidden { font-size: 12px; color: var(--text-muted); }
 
 @media (prefers-reduced-motion: reduce) {
-  .wheel-pointer, .wedge { transition: none !important; }
+  .clock-hand, .hour-band { transition: none !important; }
   .chip { animation: none !important; }
 }
 
@@ -576,7 +617,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
 }
 
 .dm-columns { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-.dm-wheel-col { flex: 1 1 420px; min-width: 300px; }
+.dm-clock-col { flex: 1 1 420px; min-width: 300px; }
 .dm-side-col { flex: 1 1 300px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; }
 
 .dm-panel {
@@ -626,7 +667,28 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   text-align: center; font-size: 17px; font-weight: 600;
 }
 
+/* Reaction boxes get their own full-width row — one box per enemy adds up. */
+.dm-boxes-panel { margin-top: 4px; }
+.dm-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.dm-panel-head h3 { margin: 0; }
+.dm-boxes-panel .boxes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.player-boxes h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+.player-boxes .boxes-row { padding: 0 0 8px; }
+.player-boxes .reaction-box { flex: 0 0 auto; }
+
 @media (max-width: 640px) {
   .dm-columns { flex-direction: column; }
-  .dm-wheel-col, .dm-side-col { width: 100%; }
+  .dm-clock-col, .dm-side-col { width: 100%; }
 }

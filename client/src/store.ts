@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState, Chip, Player, Npc, Phase } from './shared/types';
+import type { GameState, Chip, Player, Npc, Phase, ReactionBox } from './shared/types';
 
 interface Store {
   version: number;
@@ -16,6 +16,11 @@ interface Store {
   playerOrder: number[];
   npcs: Npc[];
   previousNpcNames: string[];
+  previousChipCount: number;
+
+  /** kept keyed so an editor can subscribe to one box and not rerender on the rest */
+  boxesById: Record<number, ReactionBox>;
+  boxOrder: number[];
 
   self: { playerId?: number; isDm: boolean; sessionId: string };
   connected: boolean;
@@ -44,6 +49,9 @@ export const useStore = create<Store>((set, get) => ({
   playerOrder: [],
   npcs: [],
   previousNpcNames: [],
+  previousChipCount: 0,
+  boxesById: {},
+  boxOrder: [],
 
   self: { isDm: false, sessionId: '' },
   connected: false,
@@ -65,6 +73,13 @@ export const useStore = create<Store>((set, get) => ({
       playerOrder.push(p.id);
     }
 
+    const boxesById: Record<number, ReactionBox> = {};
+    const boxOrder: number[] = [];
+    for (const b of state.reactionBoxes ?? []) {
+      boxesById[b.id] = b;
+      boxOrder.push(b.id);
+    }
+
     let showRoundToast: number | null = current.showRoundToast;
     if (current.lastSeenRound > 0 && state.round > current.lastSeenRound) {
       showRoundToast = state.round;
@@ -84,6 +99,9 @@ export const useStore = create<Store>((set, get) => ({
       playerOrder,
       npcs: state.npcs,
       previousNpcNames: state.previousNpcNames ?? [],
+      previousChipCount: state.previousChipCount ?? 0,
+      boxesById,
+      boxOrder,
       showRoundToast,
     });
   },

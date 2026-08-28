@@ -8,6 +8,7 @@ export async function newCombat(client: pg.PoolClient): Promise<MutationResult> 
 
   await client.query('DELETE FROM wheel_chips');
   await client.query('DELETE FROM npcs');
+  await client.query('DELETE FROM reaction_boxes');
   await client.query('UPDATE players SET locked = false');
   await client.query(
     `UPDATE game_state
@@ -16,6 +17,7 @@ export async function newCombat(client: pg.PoolClient): Promise<MutationResult> 
             entry_wedge = NULL,
             step_index = 0,
             revealed = false,
+            previous_chips = '[]'::jsonb,
             previous_npc_names = $1
       WHERE id = 1`,
     [npcNames]

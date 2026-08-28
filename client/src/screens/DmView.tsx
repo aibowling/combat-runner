@@ -5,10 +5,12 @@ import {
   C2S,
   ENEMY_WEDGES,
   MAX_CHIPS_PER_PLAYER,
+  MAX_NPC_BATCH,
   WEDGE_COUNT,
   wedgeType,
 } from '../shared/types';
-import Wheel from '../components/Wheel';
+import Clock from '../components/Clock';
+import ReactionBoxEditor from '../components/ReactionBoxEditor';
 
 interface Props {
   onLeave: () => void;
@@ -30,12 +32,16 @@ export default function DmView({ onLeave }: Props) {
   const playersById = useStore((s) => s.playersById);
   const playerOrder = useStore((s) => s.playerOrder);
   const previousNpcNames = useStore((s) => s.previousNpcNames);
+  const previousChipCount = useStore((s) => s.previousChipCount);
+  const boxOrder = useStore((s) => s.boxOrder);
   const errorText = useStore((s) => s.errorText);
   const currentWedge = useCurrentWedge();
 
   const socket = getSocket();
   const [npcName, setNpcName] = useState('');
-  const [npcCount, setNpcCount] = useState(1);
+  // Kept as a string so the field can sit empty mid-edit — forcing it back to
+  // "1" on every keystroke made typing a two-digit count impossible.
+  const [npcCount, setNpcCount] = useState('1');
   const [selectedNpc, setSelectedNpc] = useState<number | null>(null);
 
   const placing = phase === 'placing';
@@ -57,9 +63,10 @@ export default function DmView({ onLeave }: Props) {
 
   const addNpc = () => {
     if (!npcName.trim()) return;
-    socket?.emit(C2S.DM_NPC_ADD, { name: npcName.trim(), count: npcCount });
+    const count = Math.max(1, Math.min(MAX_NPC_BATCH, parseInt(npcCount, 10) || 1));
+    socket?.emit(C2S.DM_NPC_ADD, { name: npcName.trim(), count });
     setNpcName('');
-    setNpcCount(1);
+    setNpcCount('1');
   };
 
   const notLocked = playerOrder
@@ -81,8 +88,8 @@ export default function DmView({ onLeave }: Props) {
       </div>
 
       <div className="dm-columns">
-        <div className="dm-wheel-col">
-          <Wheel
+        <div className="dm-clock-col">
+          <Clock
             chips={chips}
             currentWedge={currentWedge}
             entryWedge={entryWedge}
@@ -104,6 +111,16 @@ export default function DmView({ onLeave }: Props) {
                         .join(', ')}.`
                     : 'No players connected yet.'}
               </p>
+              {previousChipCount > 0 && (
+                <button
+                  className="btn"
+                  onClick={() => socket?.emit(C2S.DM_REPEAT_CHIPS)}
+                  title="Put last round's spread back on the clock"
+                >
+                  Repeat last round's {previousChipCount} chip
+                  {previousChipCount === 1 ? '' : 's'}
+                </button>
+              )}
               <div className="dm-button-row">
                 {!revealed && (
                   <button className="btn" onClick={() => socket?.emit(C2S.DM_REVEAL)}>
@@ -263,12 +280,19 @@ export default function DmView({ onLeave }: Props) {
                 maxLength={40}
               />
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 className="npc-count"
-                min={1}
-                max={20}
+                aria-label="How many"
                 value={npcCount}
-                onChange={(e) => setNpcCount(parseInt(e.target.value, 10) || 1)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || /^\d{1,2}$/.test(v)) setNpcCount(v);
+                }}
+                onBlur={() => {
+                  if (npcCount === '' || npcCount === '0') setNpcCount('1');
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
               />
               <button className="btn" onClick={addNpc} disabled={!npcName.trim()}>
                 Add
@@ -294,7 +318,7 @@ export default function DmView({ onLeave }: Props) {
               <button
                 className="btn"
                 onClick={() => {
-                  if (confirm('Clear the wheel and all enemies, back to round 1?')) {
+                  if (confirm('Clear the clock and all enemies, back to round 1?')) {
                     socket?.emit(C2S.DM_NEW_COMBAT);
                   }
                 }}
@@ -315,6 +339,32 @@ export default function DmView({ onLeave }: Props) {
           </section>
         </div>
       </div>
+
+      <section className="dm-panel dm-boxes-panel">
+        <div className="dm-panel-head">
+          <h3>Reaction boxes</h3>
+          <button
+            className="btn btn-small"
+            onClick={() => socket?.emit(C2S.DM_BOX_CREATE, {})}
+          >
+            + Add box
+          </button>
+        </div>
+        <p className="hint-text">
+          Every enemy gets a box. Click a die to reroll it, the arrows to nudge it.
+          When the round ends, anything under 10 was spent and rerolls — a held
+          high roll stays put.
+        </p>
+        {boxOrder.length === 0 ? (
+          <p className="muted">No boxes yet. Add an enemy, or add one by hand.</p>
+        ) : (
+          <div className="boxes-grid">
+            {boxOrder.map((id) => (
+              <ReactionBoxEditor key={id} boxId={id} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
