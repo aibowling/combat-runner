@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { useStore } from './store';
-import { S2C, type HelloPayload, type HelloAck, type StateUpdatePayload, type TurnNewPayload } from './shared/types';
+import { S2C, type HelloPayload, type HelloAck, type StateUpdatePayload } from './shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -55,11 +55,11 @@ export function connectSocket() {
     useStore.getState().applyState(data.state, data.version);
   });
 
-  socket.on(S2C.TURN_NEW, (_data: TurnNewPayload) => {
-    // Turn change handled by state diff in applyState
+  socket.on(S2C.ROUND_NEW, () => {
+    // Round change is picked up from the state diff in applyState.
   });
 
-  socket.on(S2C.YOUR_TURN, () => {
+  socket.on(S2C.YOUR_WEDGE, () => {
     try {
       if ('vibrate' in navigator) navigator.vibrate(200);
     } catch {}
@@ -75,8 +75,14 @@ export function connectSocket() {
     window.location.reload();
   });
 
-  socket.on('error', (data: { code: string; message: string }) => {
+  socket.on(S2C.ERROR, (data: { code: string; message: string }) => {
     console.error('Server error:', data.code, data.message);
+    useStore.getState().setError(data.message);
+    setTimeout(() => {
+      if (useStore.getState().errorText === data.message) {
+        useStore.getState().setError(null);
+      }
+    }, 4000);
   });
 }
 

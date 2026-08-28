@@ -10,5 +10,5 @@ export async function undo(client: pg.PoolClient): Promise<MutationResult> {
   await restoreSnapshot(client, snapshot);
   clearUndoSnapshot();
 
-  return {};
+  return { skipUndoSnapshot: true };
 }

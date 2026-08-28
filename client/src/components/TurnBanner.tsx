@@ -1,14 +1,14 @@
 import { useStore } from '../store';
 
 export default function TurnBanner() {
-  const showTurnToast = useStore((s) => s.showTurnToast);
-  const dismiss = useStore((s) => s.dismissTurnToast);
+  const showRoundToast = useStore((s) => s.showRoundToast);
+  const dismiss = useStore((s) => s.dismissRoundToast);
 
-  if (!showTurnToast) return null;
+  if (!showRoundToast) return null;
 
   return (
     <div className="turn-banner" role="alert" aria-live="polite">
-      <span>Turn {showTurnToast} started — token budgets reset, reactions rerolled!</span>
+      <span>Round {showRoundToast} — chips cleared, place again.</span>
       <button className="btn btn-ghost btn-tiny" onClick={dismiss}>×</button>
     </div>
   );

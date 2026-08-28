@@ -1,140 +1,135 @@
-import { useState } from 'react';
-import { useStore } from '../store';
+import { useStore, useCurrentWedge } from '../store';
 import { getSocket } from '../socket';
-import { C2S, MAX_MAIN_TOKENS, MAX_CUSTOM_TOKENS } from '../shared/types';
-import ReactionBox from '../components/ReactionBox';
-import Queue from '../components/Queue';
+import {
+  C2S,
+  PLAYER_WEDGES,
+  MAX_CHIPS_PER_PLAYER,
+  wedgeType,
+} from '../shared/types';
+import Wheel from '../components/Wheel';
 
 interface Props {
   onLeave: () => void;
 }
 
 export default function PlayerView({ onLeave }: Props) {
-  const boxOrder = useStore((s) => s.boxOrder);
-  const boxesById = useStore((s) => s.boxesById);
-  const currentTurn = useStore((s) => s.currentTurn);
-  const roundStarted = useStore((s) => s.roundStarted);
-  const queueOrder = useStore((s) => s.queueOrder);
-  const queueById = useStore((s) => s.queueById);
+  const round = useStore((s) => s.round);
+  const phase = useStore((s) => s.phase);
+  const revealed = useStore((s) => s.revealed);
+  const chips = useStore((s) => s.chips);
+  const entryWedge = useStore((s) => s.entryWedge);
+  const hiddenChipCount = useStore((s) => s.hiddenChipCount);
   const self = useStore((s) => s.self);
-  const optimisticMainUsed = useStore((s) => s.optimisticMainUsed);
-  const optimisticCustomUsed = useStore((s) => s.optimisticCustomUsed);
-  const pendingTokens = useStore((s) => s.pendingTokens);
-  const [customName, setCustomName] = useState('');
+  const playersById = useStore((s) => s.playersById);
+  const playerOrder = useStore((s) => s.playerOrder);
+  const errorText = useStore((s) => s.errorText);
+  const currentWedge = useCurrentWedge();
 
   const socket = getSocket();
+  const me = self.playerId ? playersById[self.playerId] : undefined;
+  const locked = !!me?.locked;
 
-  const myTokensInQueue = queueOrder.filter((id) => queueById[id]?.playerId === self.playerId);
-  const myActiveTokens = myTokensInQueue.filter(id => !queueById[id]?.completed);
-  const allMyTokensDrawn = roundStarted && myTokensInQueue.length > 0 && myActiveTokens.length === 0;
+  const myChips = chips.filter((c) => c.playerId === self.playerId);
+  const myWedges: Set<number> = new Set(myChips.map((c) => c.wedge));
 
-  const addMain = () => {
-    if (optimisticMainUsed >= MAX_MAIN_TOKENS) return;
-    const tempId = `pending-${Date.now()}-${Math.random()}`;
-    useStore.getState().addPendingToken({
-      tempId, kind: 'main', displayName: 'main (pending...)',
-    }, 'main');
-    socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind: 'main' });
+  const placing = phase === 'placing';
+  const canEdit = placing && !locked;
+
+  const liveWedges = canEdit
+    ? PLAYER_WEDGES.filter((w) => myWedges.has(w) || myChips.length < MAX_CHIPS_PER_PLAYER)
+    : [];
+
+  const toggleWedge = (wedge: number) => {
+    useStore.getState().setError(null);
+    const existing = myChips.find((c) => c.wedge === wedge);
+    if (existing) {
+      socket?.emit(C2S.PLAYER_CHIP_REMOVE, { chipId: existing.id });
+    } else {
+      socket?.emit(C2S.PLAYER_CHIP_PLACE, { wedge });
+    }
   };
 
-  const addBonus = () => {
-    const tempId = `pending-${Date.now()}-${Math.random()}`;
-    useStore.getState().addPendingToken({
-      tempId, kind: 'bonus', displayName: 'bonus (pending...)',
-    }, 'bonus');
-    socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind: 'bonus' });
-  };
-
-  const addCustomToken = () => {
-    if (!customName.trim() || optimisticCustomUsed >= MAX_CUSTOM_TOKENS) return;
-    const tempId = `pending-${Date.now()}-${Math.random()}`;
-    useStore.getState().addPendingToken({
-      tempId, kind: 'custom', displayName: customName.trim(),
-    }, 'custom');
-    socket?.emit(C2S.PLAYER_TOKEN_ADD, { kind: 'custom', name: customName.trim() });
-    setCustomName('');
-  };
-
-  const removeMyToken = (tokenId: number) => {
-    socket?.emit(C2S.PLAYER_TOKEN_REMOVE, { tokenId });
-  };
+  const waitingOn = playerOrder
+    .map((id) => playersById[id])
+    .filter((p) => p && p.connected && !p.locked)
+    .map((p) => p.displayName);
 
   return (
     <div className="player-view">
       <div className="player-header">
-        <h2>Turn {currentTurn}</h2>
+        <h2>Round {round}</h2>
         <span className="token-count">
-          {myActiveTokens.length + pendingTokens.length} token{myActiveTokens.length + pendingTokens.length !== 1 ? 's' : ''} remaining
+          {myChips.length}/{MAX_CHIPS_PER_PLAYER} chips
         </span>
-        <button className="btn btn-ghost btn-small" onClick={onLeave}>Leave</button>
+        <button className="btn btn-ghost btn-small" onClick={onLeave}>
+          Leave
+        </button>
       </div>
 
-      {allMyTokensDrawn && (
-        <div className="out-of-actions-banner">
-          You're out of actions for this round!
-        </div>
-      )}
+      <Wheel
+        chips={chips}
+        currentWedge={currentWedge}
+        entryWedge={entryWedge}
+        liveWedges={canEdit ? liveWedges : undefined}
+        onWedgeClick={toggleWedge}
+        ownPlayerId={self.playerId}
+        hiddenChipCount={hiddenChipCount}
+      />
 
-      {boxOrder.length > 0 && (
-        <div className="boxes-row">
-          {boxOrder.map((id) => (
-            <ReactionBox key={id} box={boxesById[id]} />
-          ))}
-        </div>
-      )}
+      {errorText && <p className="error-text">{errorText}</p>}
 
-      <div className="player-queue-section">
-        <h3>Initiative Queue</h3>
-        <Queue isDm={false} onRemoveOwn={removeMyToken} />
-      </div>
-
-      {!roundStarted && (
+      {placing && (
         <div className="player-actions">
-          <div className="action-buttons action-buttons-2col">
-            <button
-              className="btn btn-primary action-btn"
-              onClick={addMain}
-              disabled={optimisticMainUsed >= MAX_MAIN_TOKENS}
-            >
-              Main Action
-              <span className="counter">{optimisticMainUsed}/{MAX_MAIN_TOKENS}</span>
-            </button>
-            <button
-              className="btn action-btn"
-              onClick={addBonus}
-            >
-              Bonus
-              <span className="counter">unlimited</span>
-            </button>
-          </div>
-
-          <div className="custom-token-row">
-            <input
-              type="text"
-              placeholder="Custom token name"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addCustomToken()}
-              disabled={optimisticCustomUsed >= MAX_CUSTOM_TOKENS}
-              maxLength={40}
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-            <button
-              className="btn"
-              onClick={addCustomToken}
-              disabled={!customName.trim() || optimisticCustomUsed >= MAX_CUSTOM_TOKENS}
-            >
-              + Custom ({optimisticCustomUsed}/{MAX_CUSTOM_TOKENS})
-            </button>
-          </div>
+          {!locked ? (
+            <>
+              <p className="hint-text">
+                Tap a lit wedge to place a chip, tap it again to take it back. One chip
+                per wedge. Nobody sees your chips until everyone locks in.
+              </p>
+              <button
+                className="btn btn-primary btn-large"
+                onClick={() => socket?.emit(C2S.PLAYER_LOCK_IN)}
+                disabled={myChips.length === 0}
+              >
+                Lock in {myChips.length} chip{myChips.length === 1 ? '' : 's'}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="hint-text">
+                {revealed
+                  ? 'Chips are face up. Waiting on the entry roll.'
+                  : waitingOn.length
+                    ? `Waiting on ${waitingOn.join(', ')}.`
+                    : 'Waiting on the DM.'}
+              </p>
+              {!revealed && (
+                <button
+                  className="btn btn-large"
+                  onClick={() => socket?.emit(C2S.PLAYER_UNLOCK)}
+                >
+                  Unlock and change chips
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      {roundStarted && !allMyTokensDrawn && (
+      {phase === 'resolving' && (
         <div className="player-actions">
-          <p className="waiting-text">Round in progress — waiting for your turn...</p>
+          {currentWedge == null ? (
+            <p className="hint-text">The rotation is finished. Waiting on the DM.</p>
+          ) : myWedges.has(currentWedge) ? (
+            <div className="your-wedge-banner">Wedge {currentWedge} — you're up</div>
+          ) : (
+            <p className="hint-text">
+              Wedge {currentWedge}
+              {wedgeType(currentWedge) === 'status' && ' — conditions tick'}
+              {wedgeType(currentWedge) === 'environment' && ' — the room acts'}
+              . Your wedges: {myChips.length ? Array.from(myWedges).sort((a, b) => a - b).join(', ') : 'none'}.
+            </p>
+          )}
         </div>
       )}
     </div>

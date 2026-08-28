@@ -485,3 +485,148 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   min-width: 20px;
   text-align: right;
 }
+
+/* ================================================================== *
+ *  THE WHEEL
+ *  The wheel keeps its own dark disc regardless of page theme — it is
+ *  the focal point, and the chip colours come off the physical set.
+ * ================================================================== */
+
+.wheel {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.wheel svg { width: 100%; height: auto; display: block; }
+
+.wheel-rim { fill: #15222a; stroke: #2c4350; stroke-width: 1; }
+.wheel-hub { fill: #1d2f39; stroke: #2c4350; }
+
+.wedge {
+  stroke: #15222a;
+  stroke-width: 1.5;
+  opacity: 0.85;
+  transition: opacity 0.18s ease, stroke 0.18s ease;
+}
+.wedge-dim { opacity: 0.24; }
+.wedge-live { cursor: pointer; }
+.wedge-live:hover, .wedge-live:focus-visible { opacity: 1; outline: none; }
+.wedge-live:focus-visible { stroke: #c9963f; stroke-width: 3; }
+.wedge-current { opacity: 1; stroke: #c9963f; stroke-width: 2.5; }
+
+.wedge-num {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  fill: #101a20;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.wedge-special {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 8.5px;
+  letter-spacing: 1.4px;
+  font-weight: 600;
+  fill: #101a20;
+  pointer-events: none;
+}
+.chip-letter {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.chip { animation: chip-pop 0.18s ease-out; }
+.chip-resolved { opacity: 0.32; }
+@keyframes chip-pop { from { opacity: 0; } to { opacity: 1; } }
+
+.hub-small {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 2.4px;
+  fill: #7f8e96;
+}
+.hub-big { font-size: 42px; font-weight: 700; fill: #c9963f; }
+.hub-big-empty { fill: #2c4350; }
+
+.wheel-pointer { transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1); }
+.wheel-pointer path { fill: #c9963f; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel-pointer, .wedge { transition: none !important; }
+  .chip { animation: none !important; }
+}
+
+/* ---------------------------- layout ---------------------------- */
+
+.player-view, .dm-view { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+.dm-header {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.dm-header h2 { flex: 0 0 auto; }
+.dm-phase {
+  flex: 1;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dm-columns { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.dm-wheel-col { flex: 1 1 420px; min-width: 300px; }
+.dm-side-col { flex: 1 1 300px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; }
+
+.dm-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.dm-panel h3 { font-size: 14px; margin-bottom: 8px; }
+
+.dm-list { list-style: none; display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.dm-list-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; }
+.dm-list-row-click { cursor: pointer; border: 1px solid transparent; }
+.dm-list-row-click:hover { background: var(--bg-elevated); }
+.dm-list-row-click.selected { border-color: var(--accent); background: var(--bg-elevated); }
+.dm-list-name { flex: 1; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot-enemy { background: #8c302b; }
+.muted { color: var(--text-muted); font-size: 13px; }
+
+.dm-add-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.dm-add-row input { flex: 1; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; }
+.npc-count { flex: 0 0 64px !important; }
+
+.dm-controls { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.dm-button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.dm-button-row .btn { flex: 1 1 auto; }
+.dm-manual-entry { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+
+.now-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  padding: 12px 14px;
+}
+.now-kind { font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-muted); }
+.now-num { font-size: 32px; font-weight: 700; line-height: 1.15; }
+.now-body { font-size: 14px; margin-top: 4px; }
+.occ-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.occ-pill { border: 2px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+
+.hint-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.your-wedge-banner {
+  background: var(--accent); color: #fff;
+  padding: 14px; border-radius: var(--radius);
+  text-align: center; font-size: 17px; font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .dm-columns { flex-direction: column; }
+  .dm-wheel-col, .dm-side-col { width: 100%; }
+}

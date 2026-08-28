@@ -10,8 +10,8 @@ export default function Landing({ onJoin, error }: Props) {
 
   return (
     <div className="landing">
-      <h1>Kahoot but for Drew's System</h1>
-      <p className="subtitle">Initiative & Reaction Tracker</p>
+      <h1>The Wheel</h1>
+      <p className="subtitle">Terra initiative tracker</p>
 
       <div className="landing-actions">
         <button

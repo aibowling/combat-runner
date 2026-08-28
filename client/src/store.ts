@@ -1,125 +1,107 @@
 import { create } from 'zustand';
-import type { GameState, ReactionBox, Player, QueueToken } from './shared/types';
-
-interface PendingToken {
-  tempId: string;
-  kind: string;
-  displayName: string;
-}
+import type { GameState, Chip, Player, Npc, Phase } from './shared/types';
 
 interface Store {
   version: number;
-  currentTurn: number;
-  roundEnded: boolean;
-  roundStarted: boolean;
-  lastSeenTurn: number;
+  round: number;
+  phase: Phase;
+  entryWedge: number | null;
+  stepIndex: number;
+  revealed: boolean;
+  hiddenChipCount: number;
+  lastSeenRound: number;
 
-  boxesById: Record<number, ReactionBox>;
-  boxOrder: number[];
+  chips: Chip[];
   playersById: Record<number, Player>;
-  queueById: Record<number, QueueToken>;
-  queueOrder: number[];
+  playerOrder: number[];
+  npcs: Npc[];
   previousNpcNames: string[];
-
-  pendingTokens: PendingToken[];
-  optimisticMainUsed: number;
-  optimisticCustomUsed: number;
 
   self: { playerId?: number; isDm: boolean; sessionId: string };
   connected: boolean;
-  showTurnToast: number | null;
+  showRoundToast: number | null;
+  errorText: string | null;
 
   setSelf: (self: Store['self']) => void;
   setConnected: (c: boolean) => void;
   applyState: (state: GameState, version: number) => void;
-  addPendingToken: (token: PendingToken, kind: 'main' | 'custom' | 'bonus') => void;
-  clearPendingTokens: () => void;
-  dismissTurnToast: () => void;
+  dismissRoundToast: () => void;
+  setError: (msg: string | null) => void;
 }
 
 export const useStore = create<Store>((set, get) => ({
   version: 0,
-  currentTurn: 1,
-  roundEnded: false,
-  roundStarted: false,
-  lastSeenTurn: 0,
+  round: 1,
+  phase: 'placing',
+  entryWedge: null,
+  stepIndex: 0,
+  revealed: false,
+  hiddenChipCount: 0,
+  lastSeenRound: 0,
 
-  boxesById: {},
-  boxOrder: [],
+  chips: [],
   playersById: {},
-  queueById: {},
-  queueOrder: [],
+  playerOrder: [],
+  npcs: [],
   previousNpcNames: [],
-
-  pendingTokens: [],
-  optimisticMainUsed: 0,
-  optimisticCustomUsed: 0,
 
   self: { isDm: false, sessionId: '' },
   connected: false,
-  showTurnToast: null,
+  showRoundToast: null,
+  errorText: null,
 
   setSelf: (self) => set({ self }),
   setConnected: (connected) => set({ connected }),
+  setError: (errorText) => set({ errorText }),
 
   applyState: (state, version) => {
     const current = get();
-    if (version <= current.version && current.version > 0) return;
-
-    const boxesById: Record<number, ReactionBox> = {};
-    const boxOrder: number[] = [];
-    for (const b of state.reactionBoxes) {
-      boxesById[b.id] = b;
-      boxOrder.push(b.id);
-    }
+    if (version < current.version && current.version > 0) return;
 
     const playersById: Record<number, Player> = {};
+    const playerOrder: number[] = [];
     for (const p of state.players) {
       playersById[p.id] = p;
+      playerOrder.push(p.id);
     }
 
-    const queueById: Record<number, QueueToken> = {};
-    const queueOrder: number[] = [];
-    for (const t of state.queue) {
-      queueById[t.id] = t;
-      queueOrder.push(t.id);
-    }
-
-    const myPlayer = current.self.playerId ? playersById[current.self.playerId] : null;
-    const optimisticMainUsed = myPlayer?.mainTokensUsed ?? 0;
-    const optimisticCustomUsed = myPlayer?.customTokensUsed ?? 0;
-
-    let showTurnToast: number | null = null;
-    if (current.lastSeenTurn > 0 && state.currentTurn > current.lastSeenTurn) {
-      showTurnToast = state.currentTurn;
+    let showRoundToast: number | null = current.showRoundToast;
+    if (current.lastSeenRound > 0 && state.round > current.lastSeenRound) {
+      showRoundToast = state.round;
     }
 
     set({
       version,
-      currentTurn: state.currentTurn,
-      roundEnded: state.roundEnded,
-      roundStarted: state.roundStarted,
-      lastSeenTurn: state.currentTurn,
-      boxesById,
-      boxOrder,
+      round: state.round,
+      phase: state.phase,
+      entryWedge: state.entryWedge,
+      stepIndex: state.stepIndex,
+      revealed: state.revealed,
+      hiddenChipCount: state.hiddenChipCount,
+      lastSeenRound: state.round,
+      chips: state.chips,
       playersById,
-      queueById,
-      queueOrder,
+      playerOrder,
+      npcs: state.npcs,
       previousNpcNames: state.previousNpcNames ?? [],
-      pendingTokens: [],
-      optimisticMainUsed,
-      optimisticCustomUsed,
-      showTurnToast: showTurnToast ?? current.showTurnToast,
+      showRoundToast,
     });
   },
 
-  addPendingToken: (token, kind) => set((s) => ({
-    pendingTokens: [...s.pendingTokens, token],
-    optimisticMainUsed: kind === 'main' ? s.optimisticMainUsed + 1 : s.optimisticMainUsed,
-    optimisticCustomUsed: kind === 'custom' ? s.optimisticCustomUsed + 1 : s.optimisticCustomUsed,
-  })),
-
-  clearPendingTokens: () => set({ pendingTokens: [] }),
-
-  dismissTurnToast: () => set({ showTurnToast: null }),
+  dismissRoundToast: () => set({ showRoundToast: null }),
 }));
+
+/** Wedge the pointer sits on, or null before the entry roll / after the rotation. */
+export function useCurrentWedge(): number | null {
+  const phase = useStore((s) => s.phase);
+  const entryWedge = useStore((s) => s.entryWedge);
+  const stepIndex = useStore((s) => s.stepIndex);
+  if (phase !== 'resolving' || entryWedge == null || stepIndex >= 10) return null;
+  return ((entryWedge - 1 + stepIndex) % 10) + 1;
+}
+
+const CHIP_COLORS = ['#d8a24a', '#4f9d92', '#c05572', '#6f7fc9', '#8aa445', '#c07a45'];
+
+export function playerColor(playerId: number): string {
+  return CHIP_COLORS[playerId % CHIP_COLORS.length];
+}
