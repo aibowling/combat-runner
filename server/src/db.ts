@@ -1,12 +1,29 @@
 import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export function createPool(): pg.Pool {
   return new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     max: 10,
   });
+}
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+function findMigrationsDir(): string {
+  const candidates = [
+    path.resolve(here, 'migrations'),               // copied alongside dist
+    path.resolve(here, '..', 'src', 'migrations'),  // dist/ -> server/src/migrations
+    path.resolve(process.cwd(), 'src', 'migrations'),
+    path.resolve(process.cwd(), 'server', 'src', 'migrations'),
+  ];
+  const found = candidates.find((dir) => fs.existsSync(dir));
+  if (!found) {
+    throw new Error(`No migrations directory. Looked in:\n  ${candidates.join('\n  ')}`);
+  }
+  return found;
 }
 
 export async function runMigrations(pool: pg.Pool): Promise<void> {
@@ -21,7 +38,7 @@ export async function runMigrations(pool: pg.Pool): Promise<void> {
       )
     `);
 
-    const migrationsDir = path.resolve(process.cwd(), 'src', 'migrations');
+    const migrationsDir = findMigrationsDir();
     const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
 
     for (const file of files) {
