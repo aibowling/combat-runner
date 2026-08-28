@@ -37,14 +37,6 @@ async function main() {
   // Health check
   app.get('/api/health', async () => ({ ok: true }));
 
-  const port = parseInt(process.env.PORT || '3000', 10);
-
-  await app.listen({ port, host: '0.0.0.0' });
-  console.log(`Server listening on :${port}`);
-
-  const httpServer = app.server;
-  const io = createSocketServer(httpServer, pool);
-
   // Static file serving — only if client/dist exists (single-service deploy)
   const clientDist = path.resolve(process.cwd(), 'client', 'dist');
   if (fs.existsSync(clientDist)) {
@@ -60,6 +52,14 @@ async function main() {
     });
     console.log('Serving static frontend from client/dist');
   }
+
+  const port = parseInt(process.env.PORT || '3000', 10);
+
+  await app.listen({ port, host: '0.0.0.0' });
+  console.log(`Server listening on :${port}`);
+
+  const httpServer = app.server;
+  const io = createSocketServer(httpServer, pool);
 
   const shutdown = async () => {
     console.log('Shutting down...');
