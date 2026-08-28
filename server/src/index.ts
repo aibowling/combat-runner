@@ -12,6 +12,7 @@ async function main() {
   const pool = createPool();
   await runMigrations(pool);
   console.log('Migrations complete');
+  console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
 
   const app = Fastify({ trustProxy: true });
 
