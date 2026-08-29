@@ -7,7 +7,6 @@ import {
   wedgeType,
 } from '../shared/types';
 import Clock from '../components/Clock';
-import ReactionBox from '../components/ReactionBox';
 
 interface Props {
   onLeave: () => void;
@@ -23,8 +22,6 @@ export default function PlayerView({ onLeave }: Props) {
   const self = useStore((s) => s.self);
   const playersById = useStore((s) => s.playersById);
   const playerOrder = useStore((s) => s.playerOrder);
-  const boxesById = useStore((s) => s.boxesById);
-  const boxOrder = useStore((s) => s.boxOrder);
   const errorText = useStore((s) => s.errorText);
   const currentWedge = useCurrentWedge();
 
@@ -80,17 +77,6 @@ export default function PlayerView({ onLeave }: Props) {
       />
 
       {errorText && <p className="error-text">{errorText}</p>}
-
-      {boxOrder.length > 0 && (
-        <section className="player-boxes">
-          <h3>Reactions</h3>
-          <div className="boxes-row">
-            {boxOrder.map((id) => (
-              <ReactionBox key={id} box={boxesById[id]} />
-            ))}
-          </div>
-        </section>
-      )}
 
       {placing && (
         <div className="player-actions">

@@ -70,16 +70,42 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
             await client.query('UPDATE game_state SET dm_session_id = $1 WHERE id = 1', [sessionId]);
             socket.data.isDm = true;
             socket.data.playerId = undefined;
+            socket.data.isParty = false;
 
             const state = await loadGameState(client, io);
             const vResult = await client.query('SELECT version FROM game_state WHERE id = 1');
-            ack?.({ ok: true, sessionId, isDm: true, state, version: vResult.rows[0].version });
+            ack?.({
+              ok: true,
+              sessionId,
+              isDm: true,
+              role: 'dm',
+              state,
+              version: vResult.rows[0].version,
+            });
 
             socket.emit(S2C.SELF_UPDATE, { isDm: true });
+          } else if (data.role === 'party') {
+            // The shared screen owns no chips and claims no seat. It is given
+            // the same redacted view a bystander gets, which is the point —
+            // the players are looking straight at it.
+            socket.data.isDm = false;
+            socket.data.playerId = undefined;
+            socket.data.isParty = true;
+
+            const state = await loadGameState(client, io);
+            const vResult = await client.query('SELECT version FROM game_state WHERE id = 1');
+            ack?.({
+              ok: true,
+              sessionId,
+              isDm: false,
+              role: 'party',
+              state: redactState(state, {}),
+              version: vResult.rows[0].version,
+            });
           } else {
             let playerName = (data.name || '').trim().slice(0, MAX_NAME_LENGTH);
             if (!playerName) {
-              ack?.({ ok: false, sessionId, isDm: false, state: EMPTY_STATE, version: 0, message: 'Name is required' });
+              ack?.({ ok: false, sessionId, isDm: false, role: 'player', state: EMPTY_STATE, version: 0, message: 'Name is required' });
               return;
             }
 
@@ -138,6 +164,7 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
             socket.data.isDm = false;
             socket.data.playerId = player.id;
             socket.data.playerName = player.display_name;
+            socket.data.isParty = false;
 
             const state = await loadGameState(client, io);
             const vResult = await client.query('SELECT version FROM game_state WHERE id = 1');
@@ -146,6 +173,7 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
               sessionId,
               playerId: player.id,
               isDm: false,
+              role: 'player',
               state: redactState(state, { playerId: player.id, isDm: false }),
               version: vResult.rows[0].version,
             });
@@ -157,7 +185,7 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
         setTimeout(() => emitFullState(io, pool).catch(console.error), 100);
       } catch (err: any) {
         console.error('[hello]', err);
-        ack?.({ ok: false, sessionId: socket.data.sessionId || '', isDm: false, state: EMPTY_STATE, version: 0, message: 'Server error' });
+        ack?.({ ok: false, sessionId: socket.data.sessionId || '', isDm: false, role: data?.role ?? 'player', state: EMPTY_STATE, version: 0, message: 'Server error' });
       }
     });
 

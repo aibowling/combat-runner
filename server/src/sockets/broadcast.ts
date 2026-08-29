@@ -15,7 +15,10 @@ export async function emitStateObject(
 ): Promise<void> {
   const sockets = await io.fetchSockets();
   for (const s of sockets) {
-    const isDm = !!dmSessionId && s.data.sessionId === dmSessionId;
+    // A party screen is never the DM, even when it is running in the same
+    // browser the DM signed in from and so carries the DM's session id.
+    // Getting this wrong would put hit points on the shared display.
+    const isDm = !s.data.isParty && !!dmSessionId && s.data.sessionId === dmSessionId;
     s.emit(S2C.STATE_UPDATE, {
       state: redactState(state, { playerId: s.data.playerId, isDm }),
       version,

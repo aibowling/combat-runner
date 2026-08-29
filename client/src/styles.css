@@ -617,8 +617,10 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
 }
 
 .dm-columns { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-.dm-clock-col { flex: 1 1 420px; min-width: 300px; }
-.dm-side-col { flex: 1 1 300px; min-width: 260px; display: flex; flex-direction: column; gap: 14px; }
+/* The enemy roster is the DM's working surface, so it gets the room. The
+   clock here is a reference — the table is looking at the big one. */
+.dm-clock-col { flex: 0 1 380px; min-width: 300px; display: flex; flex-direction: column; gap: 14px; }
+.dm-side-col { flex: 2 1 520px; min-width: 300px; display: flex; flex-direction: column; gap: 14px; }
 
 .dm-panel {
   background: var(--bg-surface);
@@ -666,8 +668,97 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   text-align: center; font-size: 17px; font-weight: 600;
 }
 
-/* Reaction boxes get their own full-width row — one box per enemy adds up. */
-.dm-boxes-panel { margin-top: 4px; }
+/* ---------------------- role picker (landing) ---------------------- */
+
+.role-btn {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  padding: 14px 18px;
+}
+.role-btn-name { font-size: 16px; font-weight: 600; }
+.role-btn-note { font-size: 12px; color: var(--text-muted); line-height: 1.35; }
+
+/* ------------------------- DM: enemies + HP ------------------------ */
+
+/* The DM's clock is a reference, not the centrepiece — the table has the big one. */
+.dm-clock-small .clock { max-width: 320px; }
+
+.enemy-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.enemy-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  background: var(--bg-surface);
+}
+.enemy-row.selected { border-color: var(--accent); background: var(--bg-elevated); }
+.enemy-row.enemy-down { opacity: 0.55; }
+.enemy-top { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.enemy-name { flex: 1; font-size: 14px; }
+.enemy-chips { flex: 0 0 auto; }
+
+.enemy-hp { display: flex; align-items: center; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.hp-input {
+  width: 48px !important;
+  min-height: 32px !important;
+  padding: 3px 4px !important;
+  font-size: 13px !important;
+  text-align: center;
+}
+.hp-slash { color: var(--text-muted); font-size: 13px; }
+.hp-bar {
+  flex: 1 1 60px;
+  min-width: 50px;
+  max-width: 160px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.hp-bar-fill { height: 100%; background: var(--danger); transition: width 0.2s ease; }
+.enemy-down-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* --------------------------- party screen -------------------------- */
+
+.party-view { flex: 1; display: flex; flex-direction: column; padding: 20px 24px; gap: 16px; }
+.party-header { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+.party-header h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 2.1rem; }
+.party-status { flex: 1; font-size: 15px; color: var(--text-muted); }
+.party-leave { opacity: 0.4; }
+.party-leave:hover { opacity: 1; }
+
+.party-body { flex: 1; display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+.party-clock { flex: 2 1 460px; min-width: 320px; }
+.party-clock .clock { max-width: 640px; }
+.party-side { flex: 1 1 260px; min-width: 240px; display: flex; flex-direction: column; gap: 16px; }
+
+.party-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.party-panel h2 {
+  font-size: 12px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.party-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.party-list li { display: flex; align-items: baseline; gap: 10px; font-size: 17px; }
+.party-list .party-name { flex: 1; }
+.party-list .party-lock { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; }
+.party-away { opacity: 0.45; }
+.party-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+
 .dm-panel-head {
   display: flex;
   align-items: center;
@@ -676,18 +767,16 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   margin-bottom: 6px;
 }
 .dm-panel-head h3 { margin: 0; }
-.dm-boxes-panel .boxes-grid {
+.dm-panel .boxes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
 
-.player-boxes h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
-.player-boxes .boxes-row { padding: 0 0 8px; }
-.player-boxes .reaction-box { flex: 0 0 auto; }
-
 @media (max-width: 640px) {
   .dm-columns { flex-direction: column; }
   .dm-clock-col, .dm-side-col { width: 100%; }
+  .party-body { flex-direction: column; }
+  .party-clock, .party-side { width: 100%; }
 }

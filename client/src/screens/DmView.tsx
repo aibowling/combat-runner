@@ -11,6 +11,7 @@ import {
 } from '../shared/types';
 import Clock from '../components/Clock';
 import ReactionBoxEditor from '../components/ReactionBoxEditor';
+import EnemyRow from '../components/EnemyRow';
 
 interface Props {
   onLeave: () => void;
@@ -21,6 +22,10 @@ const WEDGE_BLURB: Record<string, string> = {
   environment: 'Global environmental effects fire.',
 };
 
+/**
+ * The DM's laptop. This is the only screen that ever sees hit points, so it is
+ * the one that must not be pointed at the table.
+ */
 export default function DmView({ onLeave }: Props) {
   const round = useStore((s) => s.round);
   const phase = useStore((s) => s.phase);
@@ -39,16 +44,15 @@ export default function DmView({ onLeave }: Props) {
 
   const socket = getSocket();
   const [npcName, setNpcName] = useState('');
-  // Kept as a string so the field can sit empty mid-edit — forcing it back to
-  // "1" on every keystroke made typing a two-digit count impossible.
+  // Kept as strings so the fields can sit empty mid-edit — forcing a value back
+  // on every keystroke made typing a two-digit number impossible.
   const [npcCount, setNpcCount] = useState('1');
+  const [npcHp, setNpcHp] = useState('');
   const [selectedNpc, setSelectedNpc] = useState<number | null>(null);
 
   const placing = phase === 'placing';
   const rotationDone = phase === 'resolving' && stepIndex >= WEDGE_COUNT;
-
-  const liveWedges =
-    placing && selectedNpc != null ? ENEMY_WEDGES : undefined;
+  const liveWedges = placing && selectedNpc != null ? ENEMY_WEDGES : undefined;
 
   const toggleWedge = (wedge: number) => {
     if (selectedNpc == null) return;
@@ -64,41 +68,49 @@ export default function DmView({ onLeave }: Props) {
   const addNpc = () => {
     if (!npcName.trim()) return;
     const count = Math.max(1, Math.min(MAX_NPC_BATCH, parseInt(npcCount, 10) || 1));
-    socket?.emit(C2S.DM_NPC_ADD, { name: npcName.trim(), count });
+    const hp = npcHp.trim() === '' ? null : parseInt(npcHp, 10);
+    socket?.emit(C2S.DM_NPC_ADD, { name: npcName.trim(), count, hp });
     setNpcName('');
     setNpcCount('1');
+    setNpcHp('');
   };
 
   const notLocked = playerOrder
     .map((id) => playersById[id])
     .filter((p) => p && p.connected && !p.locked);
 
-  const occupants = currentWedge
-    ? chips.filter((c) => c.wedge === currentWedge)
-    : [];
+  const occupants = currentWedge ? chips.filter((c) => c.wedge === currentWedge) : [];
 
   return (
     <div className="dm-view">
       <div className="dm-header">
         <h2>Round {round}</h2>
-        <span className="dm-phase">{placing ? 'Placing' : rotationDone ? 'Rotation complete' : `Step ${stepIndex + 1} of ${WEDGE_COUNT}`}</span>
+        <span className="dm-phase">
+          {placing
+            ? 'Placing'
+            : rotationDone
+              ? 'Rotation complete'
+              : `Step ${stepIndex + 1} of ${WEDGE_COUNT}`}
+        </span>
         <button className="btn btn-ghost btn-small" onClick={onLeave}>
           Leave
         </button>
       </div>
 
+      {errorText && <p className="error-text">{errorText}</p>}
+
       <div className="dm-columns">
         <div className="dm-clock-col">
-          <Clock
-            chips={chips}
-            currentWedge={currentWedge}
-            entryWedge={entryWedge}
-            liveWedges={liveWedges}
-            onWedgeClick={toggleWedge}
-            hiddenChipCount={0}
-          />
-
-          {errorText && <p className="error-text">{errorText}</p>}
+          <div className="dm-clock-small">
+            <Clock
+              chips={chips}
+              currentWedge={currentWedge}
+              entryWedge={entryWedge}
+              liveWedges={liveWedges}
+              onWedgeClick={toggleWedge}
+              hiddenChipCount={0}
+            />
+          </div>
 
           {placing && (
             <div className="dm-controls">
@@ -206,9 +218,7 @@ export default function DmView({ onLeave }: Props) {
               </div>
             </div>
           )}
-        </div>
 
-        <div className="dm-side-col">
           <section className="dm-panel">
             <h3>Players</h3>
             <ul className="dm-list">
@@ -231,81 +241,6 @@ export default function DmView({ onLeave }: Props) {
                 );
               })}
             </ul>
-          </section>
-
-          <section className="dm-panel">
-            <h3>Enemies</h3>
-            <p className="hint-text">
-              Pick one, then tap enemy wedges to place its chips.
-            </p>
-            <ul className="dm-list">
-              {npcs.length === 0 && <li className="muted">No enemies yet.</li>}
-              {npcs.map((n) => {
-                const count = chips.filter((c) => c.npcId === n.id).length;
-                return (
-                  <li
-                    key={n.id}
-                    className={
-                      'dm-list-row dm-list-row-click' +
-                      (selectedNpc === n.id ? ' selected' : '')
-                    }
-                    onClick={() => setSelectedNpc(selectedNpc === n.id ? null : n.id)}
-                  >
-                    <span className="dot dot-enemy" />
-                    <span className="dm-list-name">{n.name}</span>
-                    <span className="muted">{count}/4</span>
-                    <button
-                      className="btn btn-ghost btn-tiny"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        socket?.emit(C2S.DM_NPC_REMOVE, { npcId: n.id });
-                        if (selectedNpc === n.id) setSelectedNpc(null);
-                      }}
-                    >
-                      ×
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <div className="dm-add-row">
-              <input
-                type="text"
-                placeholder="Enemy name"
-                value={npcName}
-                onChange={(e) => setNpcName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
-                maxLength={40}
-              />
-              <input
-                type="text"
-                inputMode="numeric"
-                className="npc-count"
-                aria-label="How many"
-                value={npcCount}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '' || /^\d{1,2}$/.test(v)) setNpcCount(v);
-                }}
-                onBlur={() => {
-                  if (npcCount === '' || npcCount === '0') setNpcCount('1');
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
-              />
-              <button className="btn" onClick={addNpc} disabled={!npcName.trim()}>
-                Add
-              </button>
-            </div>
-
-            {previousNpcNames.length > 0 && npcs.length === 0 && (
-              <button
-                className="btn btn-small"
-                onClick={() => socket?.emit(C2S.DM_COPY_PREVIOUS_NPCS)}
-              >
-                Bring back last combat's {previousNpcNames.length} enemies
-              </button>
-            )}
           </section>
 
           <section className="dm-panel">
@@ -337,33 +272,112 @@ export default function DmView({ onLeave }: Props) {
             </div>
           </section>
         </div>
-      </div>
 
-      <section className="dm-panel dm-boxes-panel">
-        <div className="dm-panel-head">
-          <h3>Reaction boxes</h3>
-          <button
-            className="btn btn-small"
-            onClick={() => socket?.emit(C2S.DM_BOX_CREATE, {})}
-          >
-            + Add box
-          </button>
+        <div className="dm-side-col">
+          <section className="dm-panel">
+            <h3>Enemies</h3>
+            <p className="hint-text">
+              Pick one, then tap enemy wedges on the clock to place its chips. Hit
+              points are only ever shown here.
+            </p>
+            <ul className="enemy-list">
+              {npcs.length === 0 && <li className="muted">No enemies yet.</li>}
+              {npcs.map((n) => (
+                <EnemyRow
+                  key={n.id}
+                  npc={n}
+                  chipCount={chips.filter((c) => c.npcId === n.id).length}
+                  selected={selectedNpc === n.id}
+                  onSelect={() => setSelectedNpc(selectedNpc === n.id ? null : n.id)}
+                  onRemove={() => {
+                    socket?.emit(C2S.DM_NPC_REMOVE, { npcId: n.id });
+                    if (selectedNpc === n.id) setSelectedNpc(null);
+                  }}
+                />
+              ))}
+            </ul>
+
+            <div className="dm-add-row">
+              <input
+                type="text"
+                placeholder="Enemy name"
+                value={npcName}
+                onChange={(e) => setNpcName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
+                maxLength={40}
+              />
+              <input
+                type="text"
+                inputMode="numeric"
+                className="npc-count"
+                aria-label="How many"
+                title="How many"
+                value={npcCount}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || /^\d{1,2}$/.test(v)) setNpcCount(v);
+                }}
+                onBlur={() => {
+                  if (npcCount === '' || npcCount === '0') setNpcCount('1');
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
+              />
+              <input
+                type="text"
+                inputMode="numeric"
+                className="npc-count"
+                aria-label="Hit points each"
+                title="Hit points each"
+                placeholder="HP"
+                value={npcHp}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === '' || /^\d{1,3}$/.test(v)) setNpcHp(v);
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && addNpc()}
+              />
+              <button className="btn" onClick={addNpc} disabled={!npcName.trim()}>
+                Add
+              </button>
+            </div>
+
+            {previousNpcNames.length > 0 && npcs.length === 0 && (
+              <button
+                className="btn btn-small"
+                onClick={() => socket?.emit(C2S.DM_COPY_PREVIOUS_NPCS)}
+              >
+                Bring back last combat's {previousNpcNames.length} enemies
+              </button>
+            )}
+          </section>
+
+          <section className="dm-panel">
+            <div className="dm-panel-head">
+              <h3>Reaction boxes</h3>
+              <button
+                className="btn btn-small"
+                onClick={() => socket?.emit(C2S.DM_BOX_CREATE, {})}
+              >
+                + Add box
+              </button>
+            </div>
+            <p className="hint-text">
+              Click a die to reroll it — a reroll never hands back a worse number.
+              When the round ends, anything 10 or lower was spent and rerolls; 11
+              and up is held and left alone.
+            </p>
+            {boxOrder.length === 0 ? (
+              <p className="muted">No boxes yet. Add an enemy, or add one by hand.</p>
+            ) : (
+              <div className="boxes-grid">
+                {boxOrder.map((id) => (
+                  <ReactionBoxEditor key={id} boxId={id} />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-        <p className="hint-text">
-          Every enemy gets a box. Click a die to reroll it — a reroll never hands
-          back a worse number. When the round ends, anything 10 or lower was spent
-          and rerolls; 11 and up is held and left alone.
-        </p>
-        {boxOrder.length === 0 ? (
-          <p className="muted">No boxes yet. Add an enemy, or add one by hand.</p>
-        ) : (
-          <div className="boxes-grid">
-            {boxOrder.map((id) => (
-              <ReactionBoxEditor key={id} boxId={id} />
-            ))}
-          </div>
-        )}
-      </section>
+      </div>
     </div>
   );
 }

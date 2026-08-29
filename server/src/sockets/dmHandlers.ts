@@ -8,7 +8,7 @@ import { rollEntry } from '../mutations/rollEntry.js';
 import { advanceWedge, stepBack } from '../mutations/advanceWedge.js';
 import { endRound } from '../mutations/endRound.js';
 import { reveal } from '../mutations/reveal.js';
-import { addNpcs, removeNpc, copyPreviousNpcs } from '../mutations/npcs.js';
+import { addNpcs, removeNpc, setNpcHp, copyPreviousNpcs } from '../mutations/npcs.js';
 import { createBox, updateBox, deleteBox } from '../mutations/editBox.js';
 import { repeatPreviousChips } from '../mutations/repeatChips.js';
 import { newCombat } from '../mutations/newCombat.js';
@@ -30,7 +30,10 @@ function wrapDm(
     const ack = typeof args[args.length - 1] === 'function' ? args[args.length - 1] : null;
     try {
       const dmSid = await getDmSessionId(pool);
-      if (!dmSid || socket.data.sessionId !== dmSid) {
+      // isParty matters here for the same reason it does in the broadcast: a
+      // shared screen must not drive the game just because it happens to be
+      // running in the browser the DM signed in from.
+      if (socket.data.isParty || !dmSid || socket.data.sessionId !== dmSid) {
         socket.emit(S2C.ERROR, { code: 'FORBIDDEN', message: 'Not the DM' });
         ack?.({ ok: false, message: 'Not the DM' });
         return;
@@ -50,6 +53,7 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
   socket.removeAllListeners(C2S.DM_CHIP_REMOVE);
   socket.removeAllListeners(C2S.DM_NPC_ADD);
   socket.removeAllListeners(C2S.DM_NPC_REMOVE);
+  socket.removeAllListeners(C2S.DM_NPC_SET_HP);
   socket.removeAllListeners(C2S.DM_COPY_PREVIOUS_NPCS);
   socket.removeAllListeners(C2S.DM_REPEAT_CHIPS);
   socket.removeAllListeners(C2S.DM_BOX_CREATE);
@@ -78,11 +82,18 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
   }));
 
   socket.on(C2S.DM_NPC_ADD, wrapDm(socket, pool, io, async (pool, io, data) => {
-    await mutate(pool, io, (client) => addNpcs(client, data.name, data.count ?? 1));
+    await mutate(pool, io, (client) => addNpcs(client, data.name, data.count ?? 1, data.hp));
   }));
 
   socket.on(C2S.DM_NPC_REMOVE, wrapDm(socket, pool, io, async (pool, io, data) => {
     await mutate(pool, io, (client) => removeNpc(client, data.npcId));
+  }));
+
+  socket.on(C2S.DM_NPC_SET_HP, wrapDm(socket, pool, io, async (pool, io, data) => {
+    if (typeof data?.npcId !== 'number') throw new Error('Which enemy?');
+    await mutate(pool, io, (client) => setNpcHp(client, data.npcId, data.hp, data.maxHp), {
+      snapshot: false,
+    });
   }));
 
   socket.on(C2S.DM_COPY_PREVIOUS_NPCS, wrapDm(socket, pool, io, async (pool, io) => {

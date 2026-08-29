@@ -19,7 +19,9 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
     'SELECT id, display_name, session_id, locked FROM players ORDER BY id'
   );
 
-  const npcsResult = await client.query('SELECT id, name FROM npcs ORDER BY position, id');
+  const npcsResult = await client.query(
+    'SELECT id, name, hp, max_hp FROM npcs ORDER BY position, id'
+  );
 
   const chipsResult = await client.query(`
     SELECT c.id, c.wedge, c.actor_kind, c.player_id, c.npc_id, c.note, c.resolved,
@@ -69,7 +71,12 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
       locked: r.locked,
       connected: connectedSessionIds.has(r.session_id),
     })),
-    npcs: npcsResult.rows.map((r: any) => ({ id: r.id, name: r.name })),
+    npcs: npcsResult.rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      hp: r.hp,
+      maxHp: r.max_hp,
+    })),
     chips,
     hiddenChipCount: 0,
     previousNpcNames: gs.previous_npc_names ?? [],
@@ -93,14 +100,22 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
 }
 
 /**
- * Blind placement is enforced here, not in the UI. While chips are hidden, a
- * player is sent only their own chips — everyone else's never leave the server.
+ * Blind placement and hidden hit points are both enforced here, not in the UI.
+ * The party display is a screen the players are looking at, so it is treated
+ * exactly like a player who owns no chips: it learns how many chips are hidden,
+ * never whose they are.
  */
 export function redactState(
   state: GameState,
   viewer: { playerId?: number; isDm?: boolean }
 ): GameState {
-  if (viewer.isDm || state.revealed) return state;
+  if (viewer.isDm) return state;
+
+  // Hit points are the DM's alone, whatever else is on show. This has to come
+  // before the revealed check — chips going face up does not publish HP.
+  const npcs = state.npcs.map((n) => ({ ...n, hp: null, maxHp: null }));
+
+  if (state.revealed) return { ...state, npcs };
 
   const mine = state.chips.filter(
     (c) => c.actorKind === 'player' && c.playerId === viewer.playerId
@@ -108,6 +123,7 @@ export function redactState(
 
   return {
     ...state,
+    npcs,
     chips: mine,
     hiddenChipCount: state.chips.length - mine.length,
     players: state.players.map((p) =>
@@ -130,7 +146,7 @@ export interface DbSnapshot {
     previous_chips: unknown;
   };
   players: Array<{ id: number; locked: boolean }>;
-  npcs: Array<{ id: number; name: string; position: number }>;
+  npcs: Array<{ id: number; name: string; position: number; hp: number | null; max_hp: number | null }>;
   chips: Array<{
     id: number;
     wedge: number;
@@ -155,7 +171,7 @@ export interface DbSnapshot {
 export async function captureSnapshot(client: pg.PoolClient): Promise<DbSnapshot> {
   const gs = (await client.query('SELECT * FROM game_state WHERE id = 1')).rows[0];
   const players = (await client.query('SELECT id, locked FROM players ORDER BY id')).rows;
-  const npcs = (await client.query('SELECT id, name, position FROM npcs ORDER BY id')).rows;
+  const npcs = (await client.query('SELECT id, name, position, hp, max_hp FROM npcs ORDER BY id')).rows;
   const chips = (await client.query('SELECT * FROM wheel_chips ORDER BY id')).rows;
   const boxes = (await client.query('SELECT * FROM reaction_boxes ORDER BY id')).rows;
   return { gameState: gs, players, npcs, chips, boxes };
@@ -192,11 +208,10 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
   }
 
   for (const n of snap.npcs) {
-    await client.query('INSERT INTO npcs (id, name, position) VALUES ($1, $2, $3)', [
-      n.id,
-      n.name,
-      n.position,
-    ]);
+    await client.query(
+      'INSERT INTO npcs (id, name, position, hp, max_hp) VALUES ($1, $2, $3, $4, $5)',
+      [n.id, n.name, n.position, n.hp, n.max_hp]
+    );
   }
 
   for (const p of snap.players) {

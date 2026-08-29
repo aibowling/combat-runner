@@ -112,6 +112,9 @@ export interface Player {
 export interface Npc {
   id: number;
   name: string;
+  /** null for everyone but the DM — hit points never leave the DM's screen */
+  hp: number | null;
+  maxHp: number | null;
 }
 
 export interface ReactionBox {
@@ -169,9 +172,17 @@ export interface SelfInfo {
 
 /* --------------------------- payloads ---------------------------- */
 
+/**
+ * Three screens, three jobs. The DM's laptop is private and holds everything
+ * secret; the party display is a shared screen everyone can see, so it must
+ * never be told anything the players are not meant to know; a player's phone
+ * is theirs alone and is only touched at the top of a round.
+ */
+export type Role = 'dm' | 'party' | 'player';
+
 export interface HelloPayload {
   name?: string;
-  role: 'dm' | 'player';
+  role: Role;
   sessionId?: string;
 }
 
@@ -180,6 +191,7 @@ export interface HelloAck {
   sessionId: string;
   playerId?: number;
   isDm: boolean;
+  role: Role;
   state: GameState;
   version: number;
   message?: string;
@@ -204,11 +216,20 @@ export interface ChipRemovePayload {
 export interface NpcAddPayload {
   name: string;
   count?: number;
+  hp?: number | null;
 }
 
 export interface NpcRemovePayload {
   npcId: number;
 }
+
+export interface NpcSetHpPayload {
+  npcId: number;
+  hp?: number | null;
+  maxHp?: number | null;
+}
+
+export const MAX_HP = 999;
 
 export interface SetEntryPayload {
   wedge: number;
@@ -268,6 +289,7 @@ export const C2S = {
   DM_CHIP_REMOVE: 'dm:chip:remove',
   DM_NPC_ADD: 'dm:npc:add',
   DM_NPC_REMOVE: 'dm:npc:remove',
+  DM_NPC_SET_HP: 'dm:npc:setHp',
   DM_COPY_PREVIOUS_NPCS: 'dm:copyPreviousNpcs',
   DM_REPEAT_CHIPS: 'dm:repeatChips',
 
