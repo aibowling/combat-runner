@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from './store';
-import { initSession, connectSocket, sendHello } from './socket';
+import { initSession, connectSocket, sendHello, clearHello } from './socket';
 import Landing from './screens/Landing';
 import DmView from './screens/DmView';
 import PlayerView from './screens/PlayerView';
@@ -56,6 +56,7 @@ export default function App() {
   };
 
   const handleLeave = () => {
+    clearHello();
     localStorage.removeItem('drews-session');
     setScreen('landing');
   };

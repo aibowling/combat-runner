@@ -12,13 +12,15 @@ interface StoredChip {
 }
 
 /**
- * Drop last round's spread back onto the clock. Actors that have since left the
- * fight are skipped rather than resurrected, and a wedge a chip already sits on
- * is left alone — the unique index would reject the duplicate anyway, and this
- * way a partly re-placed board still fills in the gaps.
+ * Drop last round's enemies back onto the clock. Only enemies — players place
+ * their own chips, blind, and having them appear pre-placed would take that
+ * decision away from them.
  *
- * A stored chip is also re-checked against the current layout, since a spread
- * saved before a layout change could otherwise land a player on an enemy wedge.
+ * Enemies that have since left the fight are skipped rather than resurrected,
+ * and a wedge a chip already sits on is left alone — the unique index would
+ * reject the duplicate anyway, and this way a partly re-placed board still
+ * fills in the gaps. Each chip is re-checked against the current layout too,
+ * since a spread saved before a layout change could land on the wrong wedge.
  */
 export async function repeatPreviousChips(client: pg.PoolClient): Promise<MutationResult> {
   const gs = await client.query(
@@ -28,46 +30,37 @@ export async function repeatPreviousChips(client: pg.PoolClient): Promise<Mutati
     throw new Error('Finish the round before re-placing chips');
   }
 
-  const previous: StoredChip[] = gs.rows[0].previous_chips ?? [];
-  if (previous.length === 0) throw new Error('No chips from last round to repeat');
+  const stored: StoredChip[] = gs.rows[0].previous_chips ?? [];
+  const previous = stored.filter((c) => c.actor_kind === 'npc');
+  if (previous.length === 0) throw new Error('No enemy chips from last round to repeat');
 
-  const playerIds = new Set<number>(
-    (await client.query('SELECT id FROM players')).rows.map((r: any) => r.id)
-  );
   const npcIds = new Set<number>(
     (await client.query('SELECT id FROM npcs')).rows.map((r: any) => r.id)
   );
   const taken = new Set<string>(
-    (await client.query('SELECT wedge, player_id, npc_id FROM wheel_chips')).rows.map(
-      (r: any) => `${r.wedge}:${r.player_id ?? 'n' + r.npc_id}`
+    (await client.query('SELECT wedge, npc_id FROM wheel_chips WHERE npc_id IS NOT NULL')).rows.map(
+      (r: any) => `${r.wedge}:${r.npc_id}`
     )
   );
 
   let placed = 0;
   for (const chip of previous) {
-    const actorId = chip.actor_kind === 'player' ? chip.player_id : chip.npc_id;
-    if (actorId == null) continue;
+    if (chip.npc_id == null || !npcIds.has(chip.npc_id)) continue;
+    if (wedgeType(chip.wedge) !== 'enemy') continue;
 
-    const stillHere =
-      chip.actor_kind === 'player' ? playerIds.has(actorId) : npcIds.has(actorId);
-    if (!stillHere) continue;
-
-    const needs = chip.actor_kind === 'player' ? 'player' : 'enemy';
-    if (wedgeType(chip.wedge) !== needs) continue;
-
-    const key = `${chip.wedge}:${chip.actor_kind === 'player' ? actorId : 'n' + actorId}`;
+    const key = `${chip.wedge}:${chip.npc_id}`;
     if (taken.has(key)) continue;
 
     await client.query(
-      `INSERT INTO wheel_chips (wedge, actor_kind, player_id, npc_id, note)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [chip.wedge, chip.actor_kind, chip.player_id, chip.npc_id, chip.note]
+      `INSERT INTO wheel_chips (wedge, actor_kind, npc_id, note)
+       VALUES ($1, 'npc', $2, $3)`,
+      [chip.wedge, chip.npc_id, chip.note]
     );
     taken.add(key);
     placed++;
   }
 
-  if (placed === 0) throw new Error('Every chip from last round is already placed');
+  if (placed === 0) throw new Error('Every enemy from last round is already placed');
 
   await bumpVersion(client);
   return {};

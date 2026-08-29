@@ -99,8 +99,11 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
 
   socket.on(C2S.DM_BOX_UPDATE, wrapDm(socket, pool, io, async (pool, io, data) => {
     if (typeof data?.boxId !== 'number') throw new Error('Which box?');
-    await mutate(pool, io, (client) =>
-      updateBox(client, data.boxId, data.label, data.values, data.bonus, data.armor)
+    await mutate(
+      pool,
+      io,
+      (client) => updateBox(client, data.boxId, data.label, data.values, data.bonus, data.armor),
+      { snapshot: false }
     );
   }));
 

@@ -1,7 +1,7 @@
 import pg from 'pg';
 import type { MutationResult } from './mutate.js';
 import { bumpVersion } from './mutate.js';
-import { REACTION_DIE, REROLL_BELOW } from '../shared/types.js';
+import { REACTION_DIE, REROLL_AT_OR_BELOW } from '../shared/types.js';
 
 /**
  * Chips come off the clock, everyone unlocks, and the next entry roll is a
@@ -9,8 +9,8 @@ import { REACTION_DIE, REROLL_BELOW } from '../shared/types.js';
  * gamed. The layout is kept aside though, so the DM can choose to drop the same
  * spread back on rather than re-place every enemy by hand.
  *
- * Reaction dice roll over at the same moment: a die that came up low was spent
- * and rerolls, a high one is still held and stays put.
+ * Reaction dice roll over at the same moment: a die of 10 or lower was spent
+ * and rerolls, anything above is still held and is left untouched.
  */
 export async function endRound(client: pg.PoolClient): Promise<MutationResult> {
   const layout = await client.query(
@@ -24,13 +24,13 @@ export async function endRound(client: pg.PoolClient): Promise<MutationResult> {
         SET previous_values = values,
             values = COALESCE(
               (SELECT array_agg(
-                 CASE WHEN v < $1 THEN (floor(random() * $2) + 1)::int ELSE v END
+                 CASE WHEN v <= $1 THEN (floor(random() * $2) + 1)::int ELSE v END
                  ORDER BY ord
                )
                  FROM unnest(values) WITH ORDINALITY AS t(v, ord)),
               '{}'::int[]
             )`,
-    [REROLL_BELOW, REACTION_DIE]
+    [REROLL_AT_OR_BELOW, REACTION_DIE]
   );
 
   await client.query('DELETE FROM wheel_chips');

@@ -45,6 +45,12 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
   });
 
   io.on('connection', (socket) => {
+    // Registered up front, not just after hello. A reconnecting socket is a
+    // brand new one: if its handlers only went on inside hello, a client that
+    // reconnected without re-identifying would tap wedges into the void.
+    registerDmHandlers(socket, pool, io);
+    registerPlayerHandlers(socket, pool, io);
+
     socket.on(C2S.HELLO, async (data: HelloPayload, ack?: (response: HelloAck) => void) => {
       try {
         let sessionId = socket.data.sessionId || data.sessionId;
@@ -147,9 +153,6 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
         } finally {
           client.release();
         }
-
-        registerDmHandlers(socket, pool, io);
-        registerPlayerHandlers(socket, pool, io);
 
         setTimeout(() => emitFullState(io, pool).catch(console.error), 100);
       } catch (err: any) {

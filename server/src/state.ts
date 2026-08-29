@@ -85,7 +85,10 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
         position: r.position,
       })
     ),
-    previousChipCount: (gs.previous_chips ?? []).length,
+    // Only enemies can be re-placed, so only enemies are worth counting.
+    previousChipCount: ((gs.previous_chips ?? []) as Array<{ actor_kind: string }>).filter(
+      (c) => c.actor_kind === 'npc'
+    ).length,
   };
 }
 

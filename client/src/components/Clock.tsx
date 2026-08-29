@@ -75,6 +75,28 @@ function chipFontSize(text: string): number {
 
 const MAX_CHIPS_DRAWN = 6;
 
+/* The centre readout: whoever is up, drawn large where the hands pin. */
+const HUB_R = 19;
+const HUB_GAP = 46;
+const HUB_PER_ROW = 3;
+
+function hubFontSize(text: string): number {
+  if (text.length >= 4) return 12;
+  if (text.length === 3) return 15;
+  return 18;
+}
+
+function hubSlot(k: number, n: number): { x: number; y: number } {
+  const rows = Math.ceil(n / HUB_PER_ROW);
+  const row = Math.floor(k / HUB_PER_ROW);
+  const inRow = k % HUB_PER_ROW;
+  const rowCount = Math.min(HUB_PER_ROW, n - row * HUB_PER_ROW);
+  return {
+    x: CX + (inRow - (rowCount - 1) / 2) * HUB_GAP,
+    y: CY + (row - (rows - 1) / 2) * HUB_GAP,
+  };
+}
+
 export default function Clock({
   chips,
   currentWedge,
@@ -85,6 +107,9 @@ export default function Clock({
   hiddenChipCount = 0,
 }: Props) {
   const pointerWedge = currentWedge ?? entryWedge;
+  const hubChips = currentWedge == null ? [] : chips.filter((c) => c.wedge === currentWedge);
+  const hubType = currentWedge == null ? null : wedgeType(currentWedge);
+  const hubIsSpecial = hubType === 'status' || hubType === 'environment';
 
   /**
    * The hand only ever sweeps forward, the way a real one does — going from
@@ -199,8 +224,51 @@ export default function Clock({
           </g>
         )}
 
-        <circle cx={CX} cy={CY} r={7} className="clock-pivot" />
-        <circle cx={CX} cy={CY} r={2.4} className="clock-pivot-cap" />
+        {/* The pivot only shows when nothing has taken the middle. */}
+        {!hubIsSpecial && hubChips.length === 0 && (
+          <>
+            <circle cx={CX} cy={CY} r={7} className="clock-pivot" />
+            <circle cx={CX} cy={CY} r={2.4} className="clock-pivot-cap" />
+          </>
+        )}
+
+        {/* Who is up, in the middle where the eye already is. */}
+        {hubIsSpecial && (
+          <text x={CX} y={CY + 6} className="hub-special" textAnchor="middle">
+            {hubType === 'status' ? 'STATUS' : 'ENVIRONMENT'}
+          </text>
+        )}
+
+        {!hubIsSpecial &&
+          hubChips.map((c, k) => {
+            const { x, y } = hubSlot(k, hubChips.length);
+            const isEnemy = c.actorKind === 'npc';
+            const mine = ownPlayerId != null && c.playerId === ownPlayerId;
+            const face = chipAbbrev(c.displayName);
+            return (
+              <g key={c.id} className="hub-chip">
+                <title>{c.displayName}</title>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={HUB_R}
+                  fill={isEnemy ? '#22181a' : playerColor(c.playerId ?? 0)}
+                  stroke={mine ? '#8a6d3f' : '#2b2620'}
+                  strokeWidth={mine ? 3.4 : 1.6}
+                />
+                <text
+                  x={x}
+                  y={y + hubFontSize(face) / 3}
+                  className="hub-chip-face"
+                  textAnchor="middle"
+                  fontSize={hubFontSize(face)}
+                  fill={isEnemy ? '#f2ece0' : '#22181a'}
+                >
+                  {face}
+                </text>
+              </g>
+            );
+          })}
 
         {/* Chips last — the hand must never hide who is on the wedge it points at. */}
         {WHEEL.map((w, i) => {
@@ -255,22 +323,14 @@ export default function Clock({
         })}
       </svg>
 
-      <div className="clock-plate">
-        {pointerWedge == null ? (
-          <>
-            <span className="plate-label">Entry</span>
-            <span className="plate-value plate-value-empty">not rolled</span>
-          </>
-        ) : (
-          <>
-            <span className="plate-label">{currentWedge ? 'Now' : 'Entry'}</span>
-            <span className="plate-value">Wedge {pointerWedge}</span>
-          </>
-        )}
-        {hiddenChipCount > 0 && (
-          <span className="plate-hidden">{hiddenChipCount} hidden</span>
-        )}
-      </div>
+      {/* No wedge number anywhere — the hand pointing at it is the readout. */}
+      {hiddenChipCount > 0 && (
+        <div className="clock-plate">
+          <span className="plate-hidden">
+            {hiddenChipCount} chip{hiddenChipCount === 1 ? '' : 's'} still hidden
+          </span>
+        </div>
+      )}
     </div>
   );
 }

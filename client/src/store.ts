@@ -29,6 +29,8 @@ interface Store {
 
   setSelf: (self: Store['self']) => void;
   setConnected: (c: boolean) => void;
+  /** optimistic: paint a die change before the server confirms it */
+  setBoxValues: (boxId: number, values: number[]) => void;
   applyState: (state: GameState, version: number) => void;
   dismissRoundToast: () => void;
   setError: (msg: string | null) => void;
@@ -61,6 +63,12 @@ export const useStore = create<Store>((set, get) => ({
   setSelf: (self) => set({ self }),
   setConnected: (connected) => set({ connected }),
   setError: (errorText) => set({ errorText }),
+
+  setBoxValues: (boxId, values) => {
+    const box = get().boxesById[boxId];
+    if (!box) return;
+    set({ boxesById: { ...get().boxesById, [boxId]: { ...box, values } } });
+  },
 
   applyState: (state, version) => {
     const current = get();

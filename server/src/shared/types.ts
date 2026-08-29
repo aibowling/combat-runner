@@ -53,8 +53,12 @@ export const MAX_NOTE_LENGTH = 40;
 /* ------------------------- reaction boxes ------------------------ */
 
 export const REACTION_DIE = 20;
-/** A reaction that came up low is spent — it rerolls when the round ends. */
-export const REROLL_BELOW = 10;
+/**
+ * A reaction of 10 or lower was spent and rerolls when the round ends.
+ * Anything above is still held and is left alone, so a good die is never
+ * taken away by the turn of a round.
+ */
+export const REROLL_AT_OR_BELOW = 10;
 export const MAX_BOX_VALUES = 12;
 export const NEW_BOX_VALUES = 2;
 
@@ -138,7 +142,7 @@ export interface GameState {
   hiddenChipCount: number;
   previousNpcNames: string[];
   reactionBoxes: ReactionBox[];
-  /** chips placed last round, waiting to be dropped back on in one click */
+  /** enemy chips placed last round, waiting to be dropped back on in one click */
   previousChipCount: number;
 }
 

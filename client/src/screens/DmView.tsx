@@ -81,7 +81,7 @@ export default function DmView({ onLeave }: Props) {
     <div className="dm-view">
       <div className="dm-header">
         <h2>Round {round}</h2>
-        <span className="dm-phase">{placing ? 'Placing' : rotationDone ? 'Rotation complete' : `Wedge ${stepIndex + 1} of ${WEDGE_COUNT}`}</span>
+        <span className="dm-phase">{placing ? 'Placing' : rotationDone ? 'Rotation complete' : `Step ${stepIndex + 1} of ${WEDGE_COUNT}`}</span>
         <button className="btn btn-ghost btn-small" onClick={onLeave}>
           Leave
         </button>
@@ -115,9 +115,9 @@ export default function DmView({ onLeave }: Props) {
                 <button
                   className="btn"
                   onClick={() => socket?.emit(C2S.DM_REPEAT_CHIPS)}
-                  title="Put last round's spread back on the clock"
+                  title="Put last round's enemies back on the clock"
                 >
-                  Repeat last round's {previousChipCount} chip
+                  Repeat last round's {previousChipCount} enemy chip
                   {previousChipCount === 1 ? '' : 's'}
                 </button>
               )}
@@ -154,7 +154,6 @@ export default function DmView({ onLeave }: Props) {
               {currentWedge != null && (
                 <div className="now-card">
                   <div className="now-kind">{wedgeType(currentWedge)} wedge</div>
-                  <div className="now-num">{currentWedge}</div>
                   <div className="now-body">
                     {WEDGE_BLURB[wedgeType(currentWedge)] ??
                       (occupants.length ? (
@@ -351,9 +350,9 @@ export default function DmView({ onLeave }: Props) {
           </button>
         </div>
         <p className="hint-text">
-          Every enemy gets a box. Click a die to reroll it, the arrows to nudge it.
-          When the round ends, anything under 10 was spent and rerolls — a held
-          high roll stays put.
+          Every enemy gets a box. Click a die to reroll it — a reroll never hands
+          back a worse number. When the round ends, anything 10 or lower was spent
+          and rerolls; 11 and up is held and left alone.
         </p>
         {boxOrder.length === 0 ? (
           <p className="muted">No boxes yet. Add an enemy, or add one by hand.</p>

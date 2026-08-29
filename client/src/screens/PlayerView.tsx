@@ -135,13 +135,15 @@ export default function PlayerView({ onLeave }: Props) {
           {currentWedge == null ? (
             <p className="hint-text">The rotation is finished. Waiting on the DM.</p>
           ) : myWedges.has(currentWedge) ? (
-            <div className="your-wedge-banner">Wedge {currentWedge} — you're up</div>
+            <div className="your-wedge-banner">You're up</div>
           ) : (
             <p className="hint-text">
-              Wedge {currentWedge}
-              {wedgeType(currentWedge) === 'status' && ' — conditions tick'}
-              {wedgeType(currentWedge) === 'environment' && ' — the room acts'}
-              . Your wedges: {myChips.length ? Array.from(myWedges).sort((a, b) => a - b).join(', ') : 'none'}.
+              {wedgeType(currentWedge) === 'status'
+                ? 'Conditions tick.'
+                : wedgeType(currentWedge) === 'environment'
+                  ? 'The room acts.'
+                  : 'Not your wedge yet.'}{' '}
+              You have {myChips.length} chip{myChips.length === 1 ? '' : 's'} left on the clock.
             </p>
           )}
         </div>

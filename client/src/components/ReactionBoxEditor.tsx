@@ -27,25 +27,36 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
   const emit = (patch: Record<string, unknown>) =>
     socket?.emit(C2S.DM_BOX_UPDATE, { boxId, ...patch });
 
+  /**
+   * Dice are nudged and rerolled constantly, and waiting on the server round
+   * trip for each one felt sluggish. Paint the new value at once; the
+   * broadcast that follows agrees with it.
+   */
+  const setValues = (values: number[]) => {
+    useStore.getState().setBoxValues(boxId, values);
+    emit({ values });
+  };
+
   const saveLabel = () => {
     const clean = label.trim();
     if (clean && clean !== box.label) emit({ label: clean });
     setEditing(false);
   };
 
-  const addValue = () => emit({ values: [...box.values, rollReaction()] });
-  const removeValue = (i: number) => emit({ values: box.values.filter((_, k) => k !== i) });
+  const addValue = () => setValues([...box.values, rollReaction()]);
+  const removeValue = (i: number) => setValues(box.values.filter((_, k) => k !== i));
 
   const adjustValue = (i: number, delta: number) => {
     const next = [...box.values];
     next[i] = Math.max(1, Math.min(REACTION_DIE, next[i] + delta));
-    emit({ values: next });
+    setValues(next);
   };
 
+  /** A reroll is an attempt to improve, so it never hands back a worse die. */
   const rerollValue = (i: number) => {
     const next = [...box.values];
-    next[i] = rollReaction();
-    emit({ values: next });
+    next[i] = Math.max(next[i], rollReaction());
+    setValues(next);
   };
 
   const saveNumber = (raw: string, key: 'bonus' | 'armor') => {

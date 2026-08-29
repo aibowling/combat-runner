@@ -47,7 +47,8 @@ async function maybeAutoReveal(client: pg.PoolClient, io: Server): Promise<void>
 export async function mutate(
   pool: pg.Pool,
   io: Server,
-  fn: (client: pg.PoolClient) => Promise<MutationResult>
+  fn: (client: pg.PoolClient) => Promise<MutationResult>,
+  options: { snapshot?: boolean } = {}
 ): Promise<MutationResult> {
   const client = await pool.connect();
   try {
@@ -55,7 +56,9 @@ export async function mutate(
     await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     await client.query('SELECT * FROM game_state WHERE id = 1 FOR UPDATE');
 
-    const undoSnapshot = await captureSnapshot(client);
+    // Nudging a die is not the kind of thing Undo is for, and capturing the
+    // whole board for every click is most of what made it feel slow.
+    const undoSnapshot = options.snapshot === false ? null : await captureSnapshot(client);
     const result = await fn(client);
     await maybeAutoReveal(client, io);
 
@@ -68,7 +71,7 @@ export async function mutate(
 
     await client.query('COMMIT');
 
-    if (!result.skipUndoSnapshot) lastUndoSnapshot = undoSnapshot;
+    if (undoSnapshot && !result.skipUndoSnapshot) lastUndoSnapshot = undoSnapshot;
 
     await emitStateObject(io, postState, version, dmSessionId);
 

@@ -5,6 +5,8 @@ import { S2C, type HelloPayload, type HelloAck, type StateUpdatePayload } from '
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 let socket: Socket | null = null;
+/** The identity to re-send whenever the socket comes back up. */
+let lastHello: HelloPayload | null = null;
 
 export function getSocket(): Socket | null {
   return socket;
@@ -45,6 +47,10 @@ export function connectSocket() {
 
   socket.on('connect', () => {
     useStore.setState({ connected: true });
+    // A reconnect gives us a brand new socket on the server, one that has no
+    // idea which player it belongs to. Re-identify immediately, or placements
+    // silently go nowhere and our own chips get redacted out of our own view.
+    if (lastHello) emitHello(lastHello);
   });
 
   socket.on('disconnect', () => {
@@ -86,7 +92,7 @@ export function connectSocket() {
   });
 }
 
-export function sendHello(payload: HelloPayload, onAck: (ack: HelloAck) => void) {
+function emitHello(payload: HelloPayload, onAck?: (ack: HelloAck) => void) {
   const s = getSocket();
   if (!s) return;
 
@@ -94,6 +100,8 @@ export function sendHello(payload: HelloPayload, onAck: (ack: HelloAck) => void)
 
   s.emit('hello', { ...payload, sessionId: fallbackSid }, (ack: HelloAck) => {
     if (ack.ok) {
+      lastHello = payload;
+
       localStorage.setItem('drews-session', JSON.stringify({
         sessionId: ack.sessionId,
         role: payload.role,
@@ -107,6 +115,15 @@ export function sendHello(payload: HelloPayload, onAck: (ack: HelloAck) => void)
       });
       useStore.getState().applyState(ack.state, ack.version);
     }
-    onAck(ack);
+    onAck?.(ack);
   });
+}
+
+export function sendHello(payload: HelloPayload, onAck: (ack: HelloAck) => void) {
+  emitHello(payload, onAck);
+}
+
+/** Stop rejoining on reconnect — the user has left on purpose. */
+export function clearHello() {
+  lastHello = null;
 }
