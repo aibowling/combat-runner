@@ -198,6 +198,14 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   padding: 2px;
 }
 .value-chip-max { outline: 2px solid var(--accent); }
+/* Fires on every reroll, including one that lands on the same number. */
+.value-chip-rolling { animation: die-roll 0.32s ease-out; }
+@keyframes die-roll {
+  0%   { transform: translateY(0) rotate(0deg); }
+  30%  { transform: translateY(-5px) rotate(-9deg); }
+  60%  { transform: translateY(0) rotate(5deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
 .value-num { padding: 0 4px; font-size: 14px; min-width: 24px; text-align: center; }
 .adj-btn {
   background: transparent;
@@ -411,24 +419,10 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   justify-content: center;
 }
 .value-num-reroll .value-num-text { font-size: 14px; }
-.value-num-reroll .value-num-hint {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--accent);
-  background: var(--bg-elevated);
-  border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.1s;
-  pointer-events: none;
-}
-.value-num-reroll:hover .value-num-text { opacity: 0; }
-.value-num-reroll:hover .value-num-hint { opacity: 1; }
+/* The number stays visible on hover. It used to be swapped out for the word
+   "reroll", which meant that right after clicking — cursor still on the die —
+   the one thing you wanted to read was the one thing covered up. */
+.value-num-reroll:hover { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 4px; }
 .value-chip-max .value-num-reroll .value-num-text { font-weight: 700; font-size: 18px; color: var(--accent); }
 
 /* Turns-remaining table */

@@ -362,9 +362,9 @@ export default function DmView({ onLeave }: Props) {
               </button>
             </div>
             <p className="hint-text">
-              Click a die to reroll it — a reroll never hands back a worse number.
-              When the round ends, anything 10 or lower was spent and rerolls; 11
-              and up is held and left alone.
+              Click a die to reroll it — the new roll only takes if it comes up
+              lower. When the round ends every die of 10 or lower rerolls on its
+              own, and that one is free to go either way.
             </p>
             {boxOrder.length === 0 ? (
               <p className="muted">No boxes yet. Add an enemy, or add one by hand.</p>

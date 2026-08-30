@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { useStore } from '../store';
 import { getSocket } from '../socket';
 import { C2S, MAX_BOX_VALUES, MAX_NAME_LENGTH, REACTION_DIE, rollReaction } from '../shared/types';
@@ -13,7 +13,13 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
   const [label, setLabel] = useState('');
   const [bonusStr, setBonusStr] = useState('');
   const [armorStr, setArmorStr] = useState('');
+  // A reroll that keeps the current value is still a reroll. Without a tell,
+  // clicking a die that does not move reads as a dead button.
+  const [rolling, setRolling] = useState<number | null>(null);
+  const rollTimer = useRef<number | undefined>(undefined);
   const socket = getSocket();
+
+  useEffect(() => () => window.clearTimeout(rollTimer.current), []);
 
   useEffect(() => {
     if (!box) return;
@@ -52,11 +58,19 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
     setValues(next);
   };
 
-  /** A reroll is an attempt to improve, so it never hands back a worse die. */
+  /**
+   * Clicking a die rerolls it on the spot, and the new roll only takes if it
+   * came up lower — a held reaction can be knocked down but never talked up.
+   * The end-of-round reroll is the opposite and is free to go either way.
+   */
   const rerollValue = (i: number) => {
     const next = [...box.values];
-    next[i] = Math.max(next[i], rollReaction());
+    next[i] = Math.min(next[i], rollReaction());
     setValues(next);
+
+    setRolling(i);
+    window.clearTimeout(rollTimer.current);
+    rollTimer.current = window.setTimeout(() => setRolling(null), 320);
   };
 
   const saveNumber = (raw: string, key: 'bonus' | 'armor') => {
@@ -106,7 +120,14 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
 
       <div className="box-values-edit">
         {box.values.map((v, i) => (
-          <div key={i} className={'value-chip' + (v === best ? ' value-chip-max' : '')}>
+          <div
+            key={i}
+            className={
+              'value-chip' +
+              (v === best ? ' value-chip-max' : '') +
+              (rolling === i ? ' value-chip-rolling' : '')
+            }
+          >
             <button className="adj-btn" onClick={() => adjustValue(i, -1)} aria-label="Lower">
               −
             </button>
@@ -118,7 +139,6 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
               aria-label={`Reroll ${v}`}
             >
               <span className="value-num-text">{v}</span>
-              <span className="value-num-hint">reroll</span>
             </button>
             <button className="adj-btn" onClick={() => adjustValue(i, 1)} aria-label="Raise">
               +
