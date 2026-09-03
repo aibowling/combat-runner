@@ -68,9 +68,11 @@ export default memo(function ReactionBoxEditor({ boxId }: Props) {
     next[i] = Math.min(next[i], rollReaction());
     setValues(next);
 
-    setRolling(i);
+    // Retrigger the fade even on a rapid second click of the same die.
+    setRolling(null);
     window.clearTimeout(rollTimer.current);
-    rollTimer.current = window.setTimeout(() => setRolling(null), 320);
+    requestAnimationFrame(() => setRolling(i));
+    rollTimer.current = window.setTimeout(() => setRolling(null), 1150);
   };
 
   const saveNumber = (raw: string, key: 'bonus' | 'armor') => {

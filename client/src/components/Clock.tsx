@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { WHEEL, wedgeType, chipAbbrev, type Chip, type WedgeType } from '../shared/types';
+import {
+  WHEEL,
+  WEDGE_COUNT,
+  wedgeType,
+  chipAbbrev,
+  type Chip,
+  type WedgeType,
+} from '../shared/types';
 import { playerColor } from '../store';
 
 interface Props {
@@ -12,6 +19,8 @@ interface Props {
   /** chips this viewer owns, drawn with a ring so they stand out */
   ownPlayerId?: number;
   hiddenChipCount?: number;
+  /** drives the hour hand — one hour per round, wrapping every ten */
+  round?: number;
 }
 
 /** Chapter-ring tints, muted so the dial still reads as a dial. */
@@ -105,6 +114,7 @@ export default function Clock({
   onWedgeClick,
   ownPlayerId,
   hiddenChipCount = 0,
+  round = 1,
 }: Props) {
   const pointerWedge = currentWedge ?? entryWedge;
   const hubChips = currentWedge == null ? [] : chips.filter((c) => c.wedge === currentWedge);
@@ -117,6 +127,31 @@ export default function Clock({
    */
   const sweptRef = useRef<number | null>(null);
   const [handAngle, setHandAngle] = useState(0);
+
+  /**
+   * The hour hand counts rounds rather than wedges — one hour per round, so it
+   * comes back round to the top every tenth. Like the wedge hand it only winds
+   * forward, because rounds only ever go up.
+   */
+  const hourRef = useRef<number | null>(null);
+  const [hourAngle, setHourAngle] = useState(0);
+
+  useEffect(() => {
+    const target = (((round - 1) % WEDGE_COUNT) + WEDGE_COUNT) % WEDGE_COUNT * 36 + 18;
+
+    const swept = hourRef.current;
+    if (swept === null) {
+      hourRef.current = target;
+      setHourAngle(target);
+      return;
+    }
+
+    const forward = (((target - swept) % 360) + 360) % 360;
+    if (forward === 0) return;
+    const next = swept + forward;
+    hourRef.current = next;
+    setHourAngle(next);
+  }, [round]);
 
   useEffect(() => {
     if (pointerWedge == null) return;
@@ -216,6 +251,13 @@ export default function Clock({
             </g>
           );
         })}
+
+        {/* Hour hand: short and heavy, so it reads as the slower of the two. */}
+        <g className="clock-hour-hand" transform={`rotate(${hourAngle} ${CX} ${CY})`}>
+          <path
+            d={`M${CX},104 L${CX + 7.5},134 L${CX + 5},${CY + 14} L${CX - 5},${CY + 14} L${CX - 7.5},134 Z`}
+          />
+        </g>
 
         {pointerWedge != null && (
           <g className="clock-hand" transform={`rotate(${handAngle} ${CX} ${CY})`}>

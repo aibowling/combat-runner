@@ -5,17 +5,22 @@ import { C2S, MAX_HP, type Npc } from '../shared/types';
 interface Props {
   npc: Npc;
   chipCount: number;
-  selected: boolean;
-  onSelect: () => void;
+  canDrop: boolean;
+  onDrop: () => void;
+  onUndrop: () => void;
   onRemove: () => void;
 }
 
-/** One enemy on the DM's screen: name, hit points, and its chips on the clock. */
+/**
+ * One enemy on the DM's screen. Tapping the name drops a chip on the clock —
+ * tap twice for two — and hit points live here and nowhere else.
+ */
 export default memo(function EnemyRow({
   npc,
   chipCount,
-  selected,
-  onSelect,
+  canDrop,
+  onDrop,
+  onUndrop,
   onRemove,
 }: Props) {
   const socket = getSocket();
@@ -44,25 +49,34 @@ export default memo(function EnemyRow({
     socket?.emit(C2S.DM_NPC_SET_HP, { npcId: npc.id, hp: next });
   };
 
-  const hp = npc.hp;
-  const max = npc.maxHp;
-  const ratio = hp != null && max != null && max > 0 ? Math.max(0, Math.min(1, hp / max)) : null;
-  const down = hp != null && hp <= 0;
+  const ratio =
+    npc.hp != null && npc.maxHp != null && npc.maxHp > 0
+      ? Math.max(0, Math.min(1, npc.hp / npc.maxHp))
+      : null;
+  const down = npc.hp != null && npc.hp <= 0;
 
   return (
-    <li className={'enemy-row' + (selected ? ' selected' : '') + (down ? ' enemy-down' : '')}>
-      <div className="enemy-top" onClick={onSelect}>
-        <span className="dot dot-enemy" />
-        <span className="enemy-name">{npc.name}</span>
-        <span className="muted enemy-chips">{chipCount}/4</span>
+    <li className={'actor-row' + (down ? ' actor-down' : '')}>
+      <div className="actor-top">
+        <button
+          className="actor-drop"
+          onClick={onDrop}
+          disabled={!canDrop}
+          title={canDrop ? 'Drop a chip on the clock' : 'Every enemy wedge already has one'}
+        >
+          <span className="dot dot-enemy" />
+          <span className="actor-name">{npc.name}</span>
+          <span className="actor-chips">{chipCount}</span>
+        </button>
         <button
           className="btn btn-ghost btn-tiny"
-          title="Remove enemy"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
+          onClick={onUndrop}
+          disabled={chipCount === 0}
+          title="Take back a chip"
         >
+          −
+        </button>
+        <button className="btn btn-ghost btn-tiny" onClick={onRemove} title="Remove enemy">
           ×
         </button>
       </div>

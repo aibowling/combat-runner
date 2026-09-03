@@ -48,21 +48,26 @@ export default function DmView({ onLeave }: Props) {
   // on every keystroke made typing a two-digit number impossible.
   const [npcCount, setNpcCount] = useState('1');
   const [npcHp, setNpcHp] = useState('');
-  const [selectedNpc, setSelectedNpc] = useState<number | null>(null);
+  const [playerName, setPlayerName] = useState('');
 
   const placing = phase === 'placing';
   const rotationDone = phase === 'resolving' && stepIndex >= WEDGE_COUNT;
-  const liveWedges = placing && selectedNpc != null ? ENEMY_WEDGES : undefined;
 
-  const toggleWedge = (wedge: number) => {
-    if (selectedNpc == null) return;
+  // Where a chip lands carries no meaning, so the server picks a wedge that
+  // keeps that actor's chips spread around the dial. The DM just taps a name.
+  const drop = (actor: { playerId: number } | { npcId: number }) => {
     useStore.getState().setError(null);
-    const existing = chips.find((c) => c.npcId === selectedNpc && c.wedge === wedge);
-    if (existing) {
-      socket?.emit(C2S.DM_CHIP_REMOVE, { chipId: existing.id });
-    } else {
-      socket?.emit(C2S.DM_CHIP_PLACE, { wedge, npcId: selectedNpc });
-    }
+    socket?.emit(C2S.DM_DROP_CHIP, actor);
+  };
+  const undrop = (actor: { playerId: number } | { npcId: number }) => {
+    useStore.getState().setError(null);
+    socket?.emit(C2S.DM_UNDROP_CHIP, actor);
+  };
+
+  const addPlayer = () => {
+    if (!playerName.trim()) return;
+    socket?.emit(C2S.DM_PLAYER_ADD, { name: playerName.trim() });
+    setPlayerName('');
   };
 
   const addNpc = () => {
@@ -106,9 +111,8 @@ export default function DmView({ onLeave }: Props) {
               chips={chips}
               currentWedge={currentWedge}
               entryWedge={entryWedge}
-              liveWedges={liveWedges}
-              onWedgeClick={toggleWedge}
               hiddenChipCount={0}
+              round={round}
             />
           </div>
 
@@ -221,26 +225,67 @@ export default function DmView({ onLeave }: Props) {
 
           <section className="dm-panel">
             <h3>Players</h3>
-            <ul className="dm-list">
-              {playerOrder.length === 0 && <li className="muted">Nobody has joined.</li>}
+            <ul className="actor-list">
+              {playerOrder.length === 0 && <li className="muted">Nobody at the table yet.</li>}
               {playerOrder.map((id) => {
                 const p = playersById[id];
                 if (!p) return null;
+                const count = p.chipsPlaced ?? 0;
                 return (
-                  <li key={id} className="dm-list-row">
-                    <span className="dot" style={{ background: playerColor(id) }} />
-                    <span className="dm-list-name">{p.displayName}</span>
-                    <span className="muted">
-                      {!p.connected
-                        ? 'away'
-                        : p.locked
-                          ? 'locked'
-                          : `${p.chipsPlaced ?? 0}/${MAX_CHIPS_PER_PLAYER}`}
-                    </span>
+                  <li key={id} className="actor-row">
+                    <div className="actor-top">
+                      <button
+                        className="actor-drop"
+                        onClick={() => drop({ playerId: id })}
+                        disabled={!placing || count >= MAX_CHIPS_PER_PLAYER}
+                        title={
+                          count >= MAX_CHIPS_PER_PLAYER
+                            ? 'Every player wedge already has one'
+                            : 'Drop a chip on the clock'
+                        }
+                      >
+                        <span className="dot" style={{ background: playerColor(id) }} />
+                        <span className="actor-name">{p.displayName}</span>
+                        <span className="actor-chips">{count}</span>
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-tiny"
+                        onClick={() => undrop({ playerId: id })}
+                        disabled={count === 0}
+                        title="Take back a chip"
+                      >
+                        −
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-tiny"
+                        onClick={() => {
+                          if (confirm(`Remove ${p.displayName} from the table?`)) {
+                            socket?.emit(C2S.DM_PLAYER_REMOVE, { playerId: id });
+                          }
+                        }}
+                        title="Remove player"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </li>
                 );
               })}
             </ul>
+
+            <div className="dm-add-row">
+              <input
+                type="text"
+                placeholder="Player name"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
+                maxLength={40}
+              />
+              <button className="btn" onClick={addPlayer} disabled={!playerName.trim()}>
+                Add
+              </button>
+            </div>
           </section>
 
           <section className="dm-panel">
@@ -277,24 +322,25 @@ export default function DmView({ onLeave }: Props) {
           <section className="dm-panel">
             <h3>Enemies</h3>
             <p className="hint-text">
-              Pick one, then tap enemy wedges on the clock to place its chips. Hit
-              points are only ever shown here.
+              Tap a name to drop a chip — tap twice for two. Hit points are only
+              ever shown here.
             </p>
-            <ul className="enemy-list">
+            <ul className="actor-list">
               {npcs.length === 0 && <li className="muted">No enemies yet.</li>}
-              {npcs.map((n) => (
-                <EnemyRow
-                  key={n.id}
-                  npc={n}
-                  chipCount={chips.filter((c) => c.npcId === n.id).length}
-                  selected={selectedNpc === n.id}
-                  onSelect={() => setSelectedNpc(selectedNpc === n.id ? null : n.id)}
-                  onRemove={() => {
-                    socket?.emit(C2S.DM_NPC_REMOVE, { npcId: n.id });
-                    if (selectedNpc === n.id) setSelectedNpc(null);
-                  }}
-                />
-              ))}
+              {npcs.map((n) => {
+                const count = chips.filter((c) => c.npcId === n.id).length;
+                return (
+                  <EnemyRow
+                    key={n.id}
+                    npc={n}
+                    chipCount={count}
+                    canDrop={placing && count < ENEMY_WEDGES.length}
+                    onDrop={() => drop({ npcId: n.id })}
+                    onUndrop={() => undrop({ npcId: n.id })}
+                    onRemove={() => socket?.emit(C2S.DM_NPC_REMOVE, { npcId: n.id })}
+                  />
+                );
+              })}
             </ul>
 
             <div className="dm-add-row">

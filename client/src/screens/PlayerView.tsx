@@ -74,6 +74,7 @@ export default function PlayerView({ onLeave }: Props) {
         onWedgeClick={toggleWedge}
         ownPlayerId={self.playerId}
         hiddenChipCount={hiddenChipCount}
+        round={round}
       />
 
       {errorText && <p className="error-text">{errorText}</p>}

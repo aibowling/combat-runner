@@ -54,6 +54,7 @@ export default function PartyView({ onLeave }: Props) {
             currentWedge={currentWedge}
             entryWedge={entryWedge}
             hiddenChipCount={hiddenChipCount}
+            round={round}
           />
         </div>
 

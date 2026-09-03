@@ -229,6 +229,61 @@ export interface NpcSetHpPayload {
   maxHp?: number | null;
 }
 
+export interface PlayerAddPayload {
+  name: string;
+}
+
+export interface PlayerRemovePayload {
+  playerId: number;
+}
+
+/** Drop one chip for this actor on a wedge the server picks. */
+export interface DropChipPayload {
+  playerId?: number;
+  npcId?: number;
+}
+
+export interface UndropChipPayload {
+  playerId?: number;
+  npcId?: number;
+}
+
+/**
+ * Which wedge a chip lands on carries no meaning, so the server picks: the
+ * candidate furthest around the dial from that actor's other chips, with a
+ * coin toss between equals. Two chips end up opposite each other, three
+ * spread, and the fourth takes what is left.
+ */
+export function spreadPick(
+  candidates: readonly number[],
+  taken: readonly number[],
+  crowding: (wedge: number) => number,
+  random: () => number = Math.random
+): number | null {
+  if (candidates.length === 0) return null;
+
+  const angle = (w: number) => (w - 1) * (360 / WEDGE_COUNT) + 180 / WEDGE_COUNT;
+  const apart = (a: number, b: number) => {
+    const d = Math.abs(angle(a) - angle(b)) % 360;
+    return Math.min(d, 360 - d);
+  };
+
+  const scored = candidates.map((w) => ({
+    wedge: w,
+    // How far this wedge sits from the actor's nearest existing chip. With no
+    // chips down yet every candidate ties, which makes the first drop random.
+    room: taken.length === 0 ? Infinity : Math.min(...taken.map((t) => apart(w, t))),
+    crowd: crowding(w),
+  }));
+
+  const mostRoom = Math.max(...scored.map((s) => s.room));
+  const roomy = scored.filter((s) => s.room === mostRoom);
+  const leastCrowded = Math.min(...roomy.map((s) => s.crowd));
+  const best = roomy.filter((s) => s.crowd === leastCrowded);
+
+  return best[Math.floor(random() * best.length)].wedge;
+}
+
 export const MAX_HP = 999;
 
 export interface SetEntryPayload {
@@ -290,6 +345,11 @@ export const C2S = {
   DM_NPC_ADD: 'dm:npc:add',
   DM_NPC_REMOVE: 'dm:npc:remove',
   DM_NPC_SET_HP: 'dm:npc:setHp',
+
+  DM_PLAYER_ADD: 'dm:player:add',
+  DM_PLAYER_REMOVE: 'dm:player:remove',
+  DM_DROP_CHIP: 'dm:chip:drop',
+  DM_UNDROP_CHIP: 'dm:chip:undrop',
   DM_COPY_PREVIOUS_NPCS: 'dm:copyPreviousNpcs',
   DM_REPEAT_CHIPS: 'dm:repeatChips',
 

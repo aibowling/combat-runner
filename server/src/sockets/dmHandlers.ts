@@ -11,6 +11,8 @@ import { reveal } from '../mutations/reveal.js';
 import { addNpcs, removeNpc, setNpcHp, copyPreviousNpcs } from '../mutations/npcs.js';
 import { createBox, updateBox, deleteBox } from '../mutations/editBox.js';
 import { repeatPreviousChips } from '../mutations/repeatChips.js';
+import { dropChip, undropChip, type Actor } from '../mutations/dropChip.js';
+import { addPlayer, removePlayer } from '../mutations/players.js';
 import { newCombat } from '../mutations/newCombat.js';
 import { newSession } from '../mutations/newSession.js';
 import { undo } from '../mutations/undo.js';
@@ -48,12 +50,22 @@ function wrapDm(
   };
 }
 
+function readActor(data: any): Actor {
+  if (typeof data?.playerId === 'number') return { kind: 'player', playerId: data.playerId };
+  if (typeof data?.npcId === 'number') return { kind: 'npc', npcId: data.npcId };
+  throw new Error('Which actor?');
+}
+
 export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
   socket.removeAllListeners(C2S.DM_CHIP_PLACE);
   socket.removeAllListeners(C2S.DM_CHIP_REMOVE);
   socket.removeAllListeners(C2S.DM_NPC_ADD);
   socket.removeAllListeners(C2S.DM_NPC_REMOVE);
   socket.removeAllListeners(C2S.DM_NPC_SET_HP);
+  socket.removeAllListeners(C2S.DM_PLAYER_ADD);
+  socket.removeAllListeners(C2S.DM_PLAYER_REMOVE);
+  socket.removeAllListeners(C2S.DM_DROP_CHIP);
+  socket.removeAllListeners(C2S.DM_UNDROP_CHIP);
   socket.removeAllListeners(C2S.DM_COPY_PREVIOUS_NPCS);
   socket.removeAllListeners(C2S.DM_REPEAT_CHIPS);
   socket.removeAllListeners(C2S.DM_BOX_CREATE);
@@ -94,6 +106,23 @@ export function registerDmHandlers(socket: Socket, pool: pg.Pool, io: Server) {
     await mutate(pool, io, (client) => setNpcHp(client, data.npcId, data.hp, data.maxHp), {
       snapshot: false,
     });
+  }));
+
+  socket.on(C2S.DM_PLAYER_ADD, wrapDm(socket, pool, io, async (pool, io, data) => {
+    await mutate(pool, io, (client) => addPlayer(client, data?.name));
+  }));
+
+  socket.on(C2S.DM_PLAYER_REMOVE, wrapDm(socket, pool, io, async (pool, io, data) => {
+    if (typeof data?.playerId !== 'number') throw new Error('Which player?');
+    await mutate(pool, io, (client) => removePlayer(client, data.playerId));
+  }));
+
+  socket.on(C2S.DM_DROP_CHIP, wrapDm(socket, pool, io, async (pool, io, data) => {
+    await mutate(pool, io, (client) => dropChip(client, readActor(data)));
+  }));
+
+  socket.on(C2S.DM_UNDROP_CHIP, wrapDm(socket, pool, io, async (pool, io, data) => {
+    await mutate(pool, io, (client) => undropChip(client, readActor(data)));
   }));
 
   socket.on(C2S.DM_COPY_PREVIOUS_NPCS, wrapDm(socket, pool, io, async (pool, io) => {
