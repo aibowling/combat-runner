@@ -790,51 +790,165 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
 
 .bard-hint { margin-top: -4px; }
 
-.phrase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.phrase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+/* A card is a button: whole-card tap target, generous on a phone. */
 .phrase-card {
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--tone-any);
-  border-radius: var(--radius);
-  background: var(--bg-surface);
-  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: opacity 0.2s, box-shadow 0.2s, transform 0.2s;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--tone-any);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text);
+  padding: 13px 15px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s, box-shadow 0.2s, transform 0.08s;
 }
+.phrase-card:active { transform: scale(0.985); }
+
 .phrase-head { display: flex; flex-direction: column; gap: 2px; }
-.phrase-head h3 { font-family: Georgia, serif; font-size: 1.05rem; line-height: 1.25; }
+.phrase-name { font-family: Georgia, 'Times New Roman', serif; font-size: 1.08rem; line-height: 1.25; font-weight: 600; }
 .phrase-tag {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 10px;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.phrase-arrow { margin-left: 6px; }
 .phrase-effect { font-size: 13.5px; line-height: 1.5; }
+
+/* Tempo riders sit apart from the effect — they only fire at some Tempos, and
+   scanning for "does this apply right now" is most of what happens mid-turn. */
+.phrase-rider {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.045);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.rider-at {
+  flex: 0 0 auto;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--text);
+  opacity: 0.75;
+}
+.rider-then { flex: 1; }
+
+.phrase-note { font-size: 11.5px; font-style: italic; color: var(--text-muted); }
+
+/* What playing it does to the song, kept as its own strip along the bottom. */
+.phrase-deltas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--border);
+}
+.delta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.delta-mood { background: rgba(0, 0, 0, 0.07); }
+.delta-tempo { background: #e8e2f2; color: #4a3c63; }
+.delta-volume { background: #dfeae6; color: #2f5a4c; }
+.delta-at { font-style: normal; font-weight: 400; opacity: 0.65; font-size: 10.5px; }
 
 .tone-heroic { border-left-color: var(--heroic); }
 .tone-violent { border-left-color: var(--violent); }
 .tone-somber { border-left-color: var(--somber); }
 .tone-any, .tone-none { border-left-color: var(--tone-any); }
 
-/* Playable now: lifted and tinted. Everything else recedes but stays readable,
-   because the card you cannot play is often the one you are planning towards. */
+/* Playable now: lifted and tinted. Everything else recedes but stays readable
+   and tappable, because the card you cannot play is often the one you are
+   steering towards — and because sometimes the song needs correcting by hand. */
 .phrase-live { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09); }
 .phrase-live.tone-heroic { background: var(--heroic-soft); border-color: var(--heroic); }
 .phrase-live.tone-violent { background: var(--violent-soft); border-color: var(--violent); }
 .phrase-live.tone-somber { background: var(--somber-soft); border-color: var(--somber); }
 .phrase-live.tone-any { background: var(--tone-any-soft); border-color: var(--tone-any); }
-.phrase-idle { opacity: 0.5; }
+.phrase-idle { opacity: 0.48; }
 .phrase-idle:hover { opacity: 0.85; }
 
+.phrase-played { animation: phrase-played 0.9s ease-out; }
+@keyframes phrase-played {
+  0%   { box-shadow: 0 0 0 3px var(--accent); }
+  20%  { box-shadow: 0 0 0 3px var(--accent); }
+  100% { box-shadow: 0 0 0 3px rgba(233, 69, 96, 0); }
+}
+
+.dial-moved .song-value { animation: dial-moved 0.9s ease-out; border-radius: 6px; }
+@keyframes dial-moved {
+  0%   { background: var(--accent); color: #fff; }
+  25%  { background: var(--accent); color: #fff; }
+  100% { background: transparent; color: inherit; }
+}
+
+.song-ended, .song-open {
+  padding: 9px 13px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.song-ended { background: rgba(231, 76, 60, 0.13); border: 1px solid var(--danger); }
+.song-open { background: var(--tone-any-soft); border: 1px solid var(--tone-any); }
+
+/* On a phone the three dials will not sit in a row without the Mood name
+   being crushed, so Mood takes its own line and the two numbers share one. */
 @media (max-width: 640px) {
-  .song-bar { gap: 8px; padding: 12px; }
-  .song-dial { min-width: 104px; flex: 1 1 104px; padding: 0 6px; }
-  .song-dial:last-of-type { border-right: none; }
-  .song-value { font-size: 1.5rem; min-width: 54px; }
-  .song-beat { padding-left: 0; border-top: 1px solid rgba(0, 0, 0, 0.09); padding-top: 8px; }
+  .hub-view, .bard-view { padding: 12px; gap: 12px; }
+  .song-bar { gap: 10px; padding: 12px; }
+
+  .song-dial {
+    flex: 1 1 40%;
+    min-width: 0;
+    padding: 0;
+    border-right: none;
+  }
+  .song-dial-mood {
+    flex: 1 1 100%;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.09);
+  }
+  .song-stepper { gap: 6px; }
+  .step-btn { width: 40px; height: 40px; }
+  .song-value { font-size: 1.55rem; min-width: 0; flex: 1; }
+  .song-value-mood { font-size: 1.35rem; min-width: 0; }
+
+  .song-beat {
+    flex: 1 1 100%;
+    padding-left: 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.09);
+  }
+
+  .phrase-grid { grid-template-columns: 1fr; }
+  .phrase-card { padding: 14px; }
+  .phrase-name { font-size: 1.12rem; }
+  .phrase-effect { font-size: 14px; }
 }
 
 /* ---------------------- role picker (landing) ---------------------- */
