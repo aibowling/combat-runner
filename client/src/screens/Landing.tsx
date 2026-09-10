@@ -3,10 +3,11 @@ import type { Role } from '../shared/types';
 
 interface Props {
   onJoin: (role: Role, name?: string) => void;
+  onClasses: () => void;
   error: string;
 }
 
-export default function Landing({ onJoin, error }: Props) {
+export default function Landing({ onJoin, onClasses, error }: Props) {
   const [name, setName] = useState('');
 
   return (
@@ -50,6 +51,10 @@ export default function Landing({ onJoin, error }: Props) {
       </div>
 
       {error && <p className="error-text">{error}</p>}
+
+      <button className="btn btn-ghost btn-small landing-classes" onClick={onClasses}>
+        Class trackers
+      </button>
     </div>
   );
 }

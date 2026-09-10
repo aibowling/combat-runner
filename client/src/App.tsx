@@ -6,10 +6,12 @@ import Landing from './screens/Landing';
 import DmView from './screens/DmView';
 import PartyView from './screens/PartyView';
 import PlayerView from './screens/PlayerView';
+import ClassHub from './screens/ClassHub';
+import BardHub from './screens/BardHub';
 import ConnectionBanner from './components/ConnectionBanner';
 import TurnBanner from './components/TurnBanner';
 
-type Screen = 'loading' | 'landing' | 'dm' | 'party' | 'player';
+type Screen = 'loading' | 'landing' | 'dm' | 'party' | 'player' | 'classes' | 'bard';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
@@ -68,7 +70,13 @@ export default function App() {
       <ConnectionBanner />
       <TurnBanner />
       {screen === 'loading' && <div className="loading">Connecting...</div>}
-      {screen === 'landing' && <Landing onJoin={handleJoin} error={error} />}
+      {screen === 'landing' && (
+        <Landing onJoin={handleJoin} onClasses={() => setScreen('classes')} error={error} />
+      )}
+      {screen === 'classes' && (
+        <ClassHub onOpen={() => setScreen('bard')} onBack={() => setScreen('landing')} />
+      )}
+      {screen === 'bard' && <BardHub onBack={() => setScreen('classes')} />}
       {screen === 'dm' && <DmView onLeave={handleLeave} />}
       {screen === 'party' && <PartyView onLeave={handleLeave} />}
       {screen === 'player' && <PlayerView onLeave={handleLeave} />}

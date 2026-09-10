@@ -662,6 +662,181 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   text-align: center; font-size: 17px; font-weight: 600;
 }
 
+/* ======================= class hub / the Bard ======================= */
+
+:root {
+  --heroic: #c9963f;
+  --heroic-soft: #f7efdd;
+  --violent: #b0524a;
+  --violent-soft: #f8e6e3;
+  --somber: #5f7d94;
+  --somber-soft: #e5edf3;
+  --tone-any: #7b7f88;
+  --tone-any-soft: #eef0f2;
+}
+
+.hub-view, .bard-view {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+}
+.hub-header { display: flex; align-items: center; gap: 12px; }
+.hub-header h1 {
+  flex: 1;
+  text-align: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.7rem;
+}
+.hub-header-spacer { flex: 0 0 64px; }
+.landing-classes { margin-top: 28px; color: var(--text-muted); }
+
+.class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.class-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.class-card:hover { background: var(--bg-elevated); }
+.class-card-bard { border-left-color: var(--heroic); }
+.class-name { font-family: Georgia, serif; font-size: 1.25rem; font-weight: 600; }
+.class-blurb { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+
+/* The song sits above its Phrases and tints to match the current Mood. */
+.song-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--tone-any);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  transition: border-color 0.25s, background 0.25s;
+}
+.song-heroic { border-top-color: var(--heroic); background: var(--heroic-soft); }
+.song-violent { border-top-color: var(--violent); background: var(--violent-soft); }
+.song-somber { border-top-color: var(--somber); background: var(--somber-soft); }
+
+/* Generous gaps and a rule between dials: with three steppers in a row, an
+   arrow needs to obviously belong to the number it sits beside. */
+.song-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 128px;
+  padding: 0 18px;
+  border-right: 1px solid rgba(0, 0, 0, 0.09);
+}
+.song-label {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.song-stepper { display: flex; align-items: center; gap: 8px; }
+.step-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.step-btn:hover:not(:disabled) { background: var(--bg-elevated); }
+.step-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.song-value {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  min-width: 66px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.song-value-mood { font-size: 1.25rem; min-width: 92px; white-space: nowrap; }
+.song-note { font-size: 11px; color: var(--text-muted); }
+
+.song-beat {
+  flex: 1 1 220px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  padding-left: 18px;
+}
+.song-beat p { font-size: 14px; line-height: 1.45; }
+
+.bard-hint { margin-top: -4px; }
+
+.phrase-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.phrase-card {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--tone-any);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: opacity 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.phrase-head { display: flex; flex-direction: column; gap: 2px; }
+.phrase-head h3 { font-family: Georgia, serif; font-size: 1.05rem; line-height: 1.25; }
+.phrase-tag {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.phrase-arrow { margin-left: 6px; }
+.phrase-effect { font-size: 13.5px; line-height: 1.5; }
+
+.tone-heroic { border-left-color: var(--heroic); }
+.tone-violent { border-left-color: var(--violent); }
+.tone-somber { border-left-color: var(--somber); }
+.tone-any, .tone-none { border-left-color: var(--tone-any); }
+
+/* Playable now: lifted and tinted. Everything else recedes but stays readable,
+   because the card you cannot play is often the one you are planning towards. */
+.phrase-live { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09); }
+.phrase-live.tone-heroic { background: var(--heroic-soft); border-color: var(--heroic); }
+.phrase-live.tone-violent { background: var(--violent-soft); border-color: var(--violent); }
+.phrase-live.tone-somber { background: var(--somber-soft); border-color: var(--somber); }
+.phrase-live.tone-any { background: var(--tone-any-soft); border-color: var(--tone-any); }
+.phrase-idle { opacity: 0.5; }
+.phrase-idle:hover { opacity: 0.85; }
+
+@media (max-width: 640px) {
+  .song-bar { gap: 8px; padding: 12px; }
+  .song-dial { min-width: 104px; flex: 1 1 104px; padding: 0 6px; }
+  .song-dial:last-of-type { border-right: none; }
+  .song-value { font-size: 1.5rem; min-width: 54px; }
+  .song-beat { padding-left: 0; border-top: 1px solid rgba(0, 0, 0, 0.09); padding-top: 8px; }
+}
+
 /* ---------------------- role picker (landing) ---------------------- */
 
 .role-btn {
