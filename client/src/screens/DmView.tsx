@@ -39,6 +39,7 @@ export default function DmView({ onLeave }: Props) {
   const previousNpcNames = useStore((s) => s.previousNpcNames);
   const previousChipCount = useStore((s) => s.previousChipCount);
   const boxOrder = useStore((s) => s.boxOrder);
+  const beat = useStore((s) => s.beat);
   const errorText = useStore((s) => s.errorText);
   const currentWedge = useCurrentWedge();
 
@@ -113,6 +114,7 @@ export default function DmView({ onLeave }: Props) {
               entryWedge={entryWedge}
               hiddenChipCount={0}
               round={round}
+              beatWedges={beat}
             />
           </div>
 

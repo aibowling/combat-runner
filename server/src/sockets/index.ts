@@ -6,6 +6,7 @@ import { extractSessionId } from './auth.js';
 import { checkRateLimit } from './rateLimit.js';
 import { registerDmHandlers } from './dmHandlers.js';
 import { registerPlayerHandlers } from './playerHandlers.js';
+import { registerBeatHandlers } from './beatHandlers.js';
 import { loadGameState, redactState } from '../state.js';
 import { C2S, S2C, MAX_NAME_LENGTH, EMPTY_STATE, type HelloPayload, type HelloAck } from '../shared/types.js';
 import { emitFullState } from './broadcast.js';
@@ -50,6 +51,7 @@ export function createSocketServer(httpServer: http.Server, pool: pg.Pool): Serv
     // reconnected without re-identifying would tap wedges into the void.
     registerDmHandlers(socket, pool, io);
     registerPlayerHandlers(socket, pool, io);
+    registerBeatHandlers(socket, pool, io);
 
     socket.on(C2S.HELLO, async (data: HelloPayload, ack?: (response: HelloAck) => void) => {
       try {

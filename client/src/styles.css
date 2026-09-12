@@ -538,6 +538,18 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
   pointer-events: none;
 }
 
+/* The Beat: a note pinned to each wedge it falls on, and the chapter ring
+   picked out so it carries to a screen across the room. */
+.hour-beat .hour-band { stroke: #e94560; stroke-width: 3; opacity: 1; }
+.beat-mark-disc { fill: #e94560; stroke: #f2ece0; stroke-width: 1.5; }
+.beat-mark-note {
+  font-size: 13px;
+  font-weight: 700;
+  fill: #f2ece0;
+  pointer-events: none;
+}
+.beat-mark { animation: chip-pop 0.25s ease-out; }
+
 .chip-face {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-weight: 700;

@@ -21,6 +21,8 @@ interface Props {
   hiddenChipCount?: number;
   /** drives the hour hand — one hour per round, wrapping every ten */
   round?: number;
+  /** wedges the Bard's Beat falls on */
+  beatWedges?: number[];
 }
 
 /** Chapter-ring tints, muted so the dial still reads as a dial. */
@@ -43,6 +45,10 @@ const R_NUMERAL = 168;
 const R_TICK_IN = 140;
 const R_SUBTICK_IN = 145;
 const R_LABEL = 132;
+/* The Beat marker rides just inside the chapter ring. It cannot share the
+   label radius: Status and Environment never hold chips, but a Beat wedge
+   usually does, and the chips reach out to 130. */
+const R_BEAT = 141;
 
 function polar(r: number, deg: number): [number, number] {
   const a = ((deg - 90) * Math.PI) / 180;
@@ -115,6 +121,7 @@ export default function Clock({
   ownPlayerId,
   hiddenChipCount = 0,
   round = 1,
+  beatWedges,
 }: Props) {
   const pointerWedge = currentWedge ?? entryWedge;
   const hubChips = currentWedge == null ? [] : chips.filter((c) => c.wedge === currentWedge);
@@ -184,6 +191,7 @@ export default function Clock({
           const live = !!liveWedges?.includes(w.wedge);
           const dim = !!liveWedges && !live && !isCurrent;
           const type = wedgeType(w.wedge);
+          const onBeat = !!beatWedges?.includes(w.wedge);
 
           return (
             <g
@@ -192,7 +200,8 @@ export default function Clock({
                 'hour' +
                 (live ? ' hour-live' : '') +
                 (dim ? ' hour-dim' : '') +
-                (isCurrent ? ' hour-current' : '')
+                (isCurrent ? ' hour-current' : '') +
+                (onBeat ? ' hour-beat' : '')
               }
             >
               <path
@@ -245,6 +254,20 @@ export default function Clock({
                     <text x={x} y={y + 3} className="hour-label" textAnchor="middle">
                       {type === 'status' ? 'STATUS' : 'ENVIRON'}
                     </text>
+                  );
+                })()}
+
+              {onBeat &&
+                (() => {
+                  const [x, y] = polar(R_BEAT, i * 36 + 18);
+                  return (
+                    <g className="beat-mark">
+                      <title>The Beat falls here</title>
+                      <circle cx={x} cy={y} r={9} className="beat-mark-disc" />
+                      <text x={x} y={y + 4.5} className="beat-mark-note" textAnchor="middle">
+                        ♩
+                      </text>
+                    </g>
                   );
                 })()}
 

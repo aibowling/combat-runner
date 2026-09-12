@@ -17,6 +17,8 @@ interface Store {
   npcs: Npc[];
   previousNpcNames: string[];
   previousChipCount: number;
+  /** wedges the Bard's Beat falls on */
+  beat: number[];
 
   /** kept keyed so an editor can subscribe to one box and not rerender on the rest */
   boxesById: Record<number, ReactionBox>;
@@ -52,6 +54,7 @@ export const useStore = create<Store>((set, get) => ({
   npcs: [],
   previousNpcNames: [],
   previousChipCount: 0,
+  beat: [],
   boxesById: {},
   boxOrder: [],
 
@@ -108,6 +111,7 @@ export const useStore = create<Store>((set, get) => ({
       npcs: state.npcs,
       previousNpcNames: state.previousNpcNames ?? [],
       previousChipCount: state.previousChipCount ?? 0,
+      beat: state.beat ?? [],
       boxesById,
       boxOrder,
       showRoundToast,

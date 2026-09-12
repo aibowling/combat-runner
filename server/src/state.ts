@@ -5,7 +5,7 @@ import type { GameState, Chip, Phase, ReactionBox } from './shared/types.js';
 export async function loadGameState(client: pg.PoolClient, io?: Server): Promise<GameState> {
   const gsResult = await client.query(
     `SELECT current_turn, phase, entry_wedge, step_index, revealed,
-            previous_npc_names, previous_chips
+            previous_npc_names, previous_chips, beat
        FROM game_state WHERE id = 1`
   );
   const gs = gsResult.rows[0];
@@ -92,6 +92,7 @@ export async function loadGameState(client: pg.PoolClient, io?: Server): Promise
         position: r.position,
       })
     ),
+    beat: gs.beat ?? [],
     // Only enemies can be re-placed, so only enemies are worth counting.
     previousChipCount: ((gs.previous_chips ?? []) as Array<{ actor_kind: string }>).filter(
       (c) => c.actor_kind === 'npc'
@@ -144,6 +145,7 @@ export interface DbSnapshot {
     dm_session_id: string | null;
     previous_npc_names: string[];
     previous_chips: unknown;
+    beat: number[];
   };
   players: Array<{ id: number; locked: boolean }>;
   npcs: Array<{ id: number; name: string; position: number; hp: number | null; max_hp: number | null }>;
@@ -186,7 +188,7 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
     `UPDATE game_state
         SET current_turn = $1, phase = $2, entry_wedge = $3, step_index = $4,
             revealed = $5, previous_npc_names = $6, previous_chips = $7,
-            version = version + 1
+            beat = $8, version = version + 1
       WHERE id = 1`,
     [
       snap.gameState.current_turn,
@@ -196,6 +198,7 @@ export async function restoreSnapshot(client: pg.PoolClient, snap: DbSnapshot): 
       snap.gameState.revealed,
       snap.gameState.previous_npc_names ?? [],
       JSON.stringify(snap.gameState.previous_chips ?? []),
+      snap.gameState.beat ?? [],
     ]
   );
 

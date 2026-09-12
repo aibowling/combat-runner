@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { getSocket } from '../socket';
+import { C2S } from '../shared/types';
 import {
   FRESH_SONG,
   MOODS,
@@ -132,7 +134,11 @@ export default function BardHub({ onBack }: Props) {
   const dice = beatDice(song.tempo);
 
   const rollTheBeat = () => {
-    setBeat(rollBeat(dice));
+    const rolled = rollBeat(dice);
+    setBeat(rolled);
+    // The Beat belongs on the clock the table is looking at, not just this
+    // phone. The hub keeps its own copy so it still works unconnected.
+    getSocket()?.emit(C2S.BEAT_SET, { wedges: rolled });
     setBeatRolled(false);
     requestAnimationFrame(() => setBeatRolled(true));
     timers.current.push(window.setTimeout(() => setBeatRolled(false), 900));
@@ -154,6 +160,8 @@ export default function BardHub({ onBack }: Props) {
           onClick={() => {
             setSong(FRESH_SONG);
             setEnded(false);
+            setBeat(null);
+            getSocket()?.emit(C2S.BEAT_CLEAR);
           }}
         >
           Reset
@@ -235,7 +243,7 @@ export default function BardHub({ onBack }: Props) {
               Roll {dice}d10
             </button>
             {beat && (
-              <span className={'beat-dice' + (beatRolled ? ' beat-rolled' : '')}>
+              <span className={'beat-dice' + (beatRolled ? ' beat-rolled' : '')} title="Also shown on the party clock">
                 {beat.map((v) => (
                   <span key={v} className="beat-die">
                     {v}
@@ -262,6 +270,7 @@ export default function BardHub({ onBack }: Props) {
 
       <p className="hint-text bard-hint">
         Tap a Phrase to play it and move the song. {TEMPO_MARK} tempo, {VOLUME_MARK} volume.
+        The Beat is marked on the party clock as you roll it.
       </p>
 
       <div className="phrase-grid">

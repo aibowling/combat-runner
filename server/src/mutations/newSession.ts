@@ -15,6 +15,7 @@ export async function newSession(client: pg.PoolClient): Promise<MutationResult>
             step_index = 0,
             revealed = false,
             previous_chips = '[]'::jsonb,
+            beat = '{}',
             previous_npc_names = '{}',
             dm_session_id = NULL
       WHERE id = 1`

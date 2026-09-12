@@ -22,6 +22,7 @@ export default function PlayerView({ onLeave }: Props) {
   const self = useStore((s) => s.self);
   const playersById = useStore((s) => s.playersById);
   const playerOrder = useStore((s) => s.playerOrder);
+  const beat = useStore((s) => s.beat);
   const errorText = useStore((s) => s.errorText);
   const currentWedge = useCurrentWedge();
 
@@ -75,6 +76,7 @@ export default function PlayerView({ onLeave }: Props) {
         ownPlayerId={self.playerId}
         hiddenChipCount={hiddenChipCount}
         round={round}
+        beatWedges={beat}
       />
 
       {errorText && <p className="error-text">{errorText}</p>}

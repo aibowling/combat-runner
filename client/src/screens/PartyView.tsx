@@ -23,6 +23,7 @@ export default function PartyView({ onLeave }: Props) {
   const playerOrder = useStore((s) => s.playerOrder);
   const boxesById = useStore((s) => s.boxesById);
   const boxOrder = useStore((s) => s.boxOrder);
+  const beat = useStore((s) => s.beat);
   const currentWedge = useCurrentWedge();
 
   const placing = phase === 'placing';
@@ -55,6 +56,7 @@ export default function PartyView({ onLeave }: Props) {
             entryWedge={entryWedge}
             hiddenChipCount={hiddenChipCount}
             round={round}
+            beatWedges={beat}
           />
         </div>
 

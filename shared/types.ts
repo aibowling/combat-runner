@@ -147,6 +147,8 @@ export interface GameState {
   reactionBoxes: ReactionBox[];
   /** enemy chips placed last round, waiting to be dropped back on in one click */
   previousChipCount: number;
+  /** wedges the Bard's Beat falls on this round */
+  beat: number[];
 }
 
 export const EMPTY_STATE: GameState = {
@@ -162,6 +164,7 @@ export const EMPTY_STATE: GameState = {
   previousNpcNames: [],
   reactionBoxes: [],
   previousChipCount: 0,
+  beat: [],
 };
 
 export interface SelfInfo {
@@ -306,6 +309,26 @@ export interface BoxDeletePayload {
   boxId: number;
 }
 
+export interface BeatSetPayload {
+  wedges: number[];
+}
+
+/** At most 3d10 are ever rolled for the Beat. */
+export const MAX_BEAT_DICE = 3;
+
+/**
+ * Wedges the Beat can land on. Status and Environmental are rerolled, so they
+ * are never legal — derived from the layout rather than hardcoded, so the two
+ * stay in step if the wedges are ever re-cut.
+ */
+export const BEAT_WEDGES: readonly number[] = Array.from(
+  { length: WEDGE_COUNT },
+  (_, i) => i + 1
+).filter((w) => {
+  const t = wedgeType(w);
+  return t !== 'status' && t !== 'environment';
+});
+
 export interface AckPayload {
   ok: boolean;
   message?: string;
@@ -352,6 +375,9 @@ export const C2S = {
   DM_UNDROP_CHIP: 'dm:chip:undrop',
   DM_COPY_PREVIOUS_NPCS: 'dm:copyPreviousNpcs',
   DM_REPEAT_CHIPS: 'dm:repeatChips',
+
+  BEAT_SET: 'beat:set',
+  BEAT_CLEAR: 'beat:clear',
 
   DM_BOX_CREATE: 'dm:box:create',
   DM_BOX_UPDATE: 'dm:box:update',
