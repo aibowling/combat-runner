@@ -7,6 +7,8 @@
  * Mood, Tempo and Volume rather than leaving the player to do it by hand.
  */
 
+import { WEDGE_COUNT, wedgeType } from '../shared/types';
+
 export type Mood = 'heroic' | 'violent' | 'somber';
 
 /** 'none' is a song that has not started, when only the Intros are playable. */
@@ -274,6 +276,35 @@ export function beatDice(tempo: number): number {
   if (tempo >= TEMPO_MAX) return 3;
   if (tempo >= 3) return 2;
   return 1;
+}
+
+/**
+ * Wedges the Beat can land on. Status and Environmental are rerolled, and
+ * rather than hardcode 3 and 8 this reads the clock's own layout, so the two
+ * stay in step if the wedges are ever re-cut.
+ */
+export const BEAT_POOL: readonly number[] = Array.from(
+  { length: WEDGE_COUNT },
+  (_, i) => i + 1
+).filter((w) => {
+  const t = wedgeType(w);
+  return t !== 'status' && t !== 'environment';
+});
+
+/**
+ * Roll the Beat. The rules say to reroll a die that lands on Status,
+ * Environmental, or a duplicate — which is the same thing as drawing that many
+ * distinct values out of the wedges that remain, without the looping.
+ */
+export function rollBeat(count: number, random: () => number = Math.random): number[] {
+  const available = [...BEAT_POOL];
+  const picks: number[] = [];
+
+  for (let i = 0; i < count && available.length > 0; i++) {
+    picks.push(available.splice(Math.floor(random() * available.length), 1)[0]);
+  }
+
+  return picks.sort((a, b) => a - b);
 }
 
 export function moodName(mood: SongMood): string {

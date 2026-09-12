@@ -14,6 +14,7 @@ import {
   applyPhrase,
   beatDice,
   clamp,
+  rollBeat,
   isPlayable,
   moodName,
   phraseDeltas,
@@ -28,6 +29,7 @@ interface Props {
 }
 
 const STORE_KEY = 'drews-bard-song';
+const BEAT_KEY = 'drews-bard-beat';
 
 function loadSong(): Song {
   try {
@@ -45,6 +47,17 @@ function loadSong(): Song {
   }
 }
 
+function loadBeat(): number[] | null {
+  try {
+    const raw = localStorage.getItem(BEAT_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    return Array.isArray(v) && v.every((n) => typeof n === 'number') ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 type Moved = { mood: boolean; tempo: boolean; volume: boolean };
 const NOTHING_MOVED: Moved = { mood: false, tempo: false, volume: false };
 
@@ -59,6 +72,11 @@ export default function BardHub({ onBack }: Props) {
   const [played, setPlayed] = useState<string | null>(null);
   const [moved, setMoved] = useState<Moved>(NOTHING_MOVED);
   const [ended, setEnded] = useState(false);
+  // The Beat stands until it is rolled again. Changing the Tempo changes how
+  // many dice the *next* roll uses, but the dice already on the table keep
+  // whatever they came up as.
+  const [beat, setBeat] = useState<number[] | null>(loadBeat);
+  const [beatRolled, setBeatRolled] = useState(false);
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -68,6 +86,15 @@ export default function BardHub({ onBack }: Props) {
       /* private browsing still gets a working page, just no memory */
     }
   }, [song]);
+
+  useEffect(() => {
+    try {
+      if (beat) localStorage.setItem(BEAT_KEY, JSON.stringify(beat));
+      else localStorage.removeItem(BEAT_KEY);
+    } catch {
+      /* no memory in private mode, but the roller still works */
+    }
+  }, [beat]);
 
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
@@ -100,6 +127,15 @@ export default function BardHub({ onBack }: Props) {
   const stepMood = (dir: 1 | -1) => {
     const i = MOOD_CYCLE.indexOf(song.mood);
     nudge({ mood: MOOD_CYCLE[(i + dir + MOOD_CYCLE.length) % MOOD_CYCLE.length] });
+  };
+
+  const dice = beatDice(song.tempo);
+
+  const rollTheBeat = () => {
+    setBeat(rollBeat(dice));
+    setBeatRolled(false);
+    requestAnimationFrame(() => setBeatRolled(true));
+    timers.current.push(window.setTimeout(() => setBeatRolled(false), 900));
   };
 
   const current = MOODS.find((m) => m.id === song.mood);
@@ -159,7 +195,7 @@ export default function BardHub({ onBack }: Props) {
               ▴
             </button>
           </div>
-          <span className="song-note">Beat {beatDice(song.tempo)}d10</span>
+          <span className="song-note">Beat {dice}d10</span>
         </div>
 
         <div className={'song-dial' + (moved.volume ? ' dial-moved' : '')}>
@@ -193,6 +229,27 @@ export default function BardHub({ onBack }: Props) {
         <div className="song-beat">
           <span className="song-label">On the Beat</span>
           <p>{current ? current.beat : 'Play an Intro to open the song.'}</p>
+
+          <div className="beat-roller">
+            <button className="btn btn-small beat-roll" onClick={rollTheBeat}>
+              Roll {dice}d10
+            </button>
+            {beat && (
+              <span className={'beat-dice' + (beatRolled ? ' beat-rolled' : '')}>
+                {beat.map((v) => (
+                  <span key={v} className="beat-die">
+                    {v}
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
+
+          {beat && beat.length !== dice && (
+            <span className="beat-stale">
+              Rolled on {beat.length}d10 — the Tempo now calls for {dice}d10.
+            </span>
+          )}
         </div>
       </section>
 
