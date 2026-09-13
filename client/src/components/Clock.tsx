@@ -90,26 +90,35 @@ function chipFontSize(text: string): number {
 
 const MAX_CHIPS_DRAWN = 6;
 
-/* The centre readout: whoever is up, drawn large where the hands pin. */
-const HUB_R = 19;
-const HUB_GAP = 46;
-const HUB_PER_ROW = 3;
+/* The centre readout: whoever is up, named in full on a stack of plates.
+   The ring has to abbreviate because a chip is 24px across, but the middle is
+   the one place there is room to just say who it is. */
+const HUB_PLATE_MAX_W = 128;
+const HUB_PLATE_GAP = 5;
+const MAX_HUB_PLATES = 4;
+/** Rough width of one character as a fraction of font size, for this sans. */
+const HUB_CHAR_W = 0.56;
+const HUB_FONT_MIN = 8;
+const HUB_FONT_MAX = 14;
 
-function hubFontSize(text: string): number {
-  if (text.length >= 4) return 12;
-  if (text.length === 3) return 15;
-  return 18;
+/** The most characters that still fit across a plate at the smallest size. */
+const HUB_MAX_CHARS = Math.floor(HUB_PLATE_MAX_W / (HUB_FONT_MIN * HUB_CHAR_W));
+
+function fitName(name: string): string {
+  const clean = (name || '').trim();
+  if (clean.length <= HUB_MAX_CHARS) return clean;
+  return clean.slice(0, HUB_MAX_CHARS - 1).trimEnd() + '…';
 }
 
-function hubSlot(k: number, n: number): { x: number; y: number } {
-  const rows = Math.ceil(n / HUB_PER_ROW);
-  const row = Math.floor(k / HUB_PER_ROW);
-  const inRow = k % HUB_PER_ROW;
-  const rowCount = Math.min(HUB_PER_ROW, n - row * HUB_PER_ROW);
-  return {
-    x: CX + (inRow - (rowCount - 1) / 2) * HUB_GAP,
-    y: CY + (row - (rows - 1) / 2) * HUB_GAP,
-  };
+/** One size for the whole stack, chosen so the longest name still fits. */
+function hubFont(names: string[]): number {
+  const longest = Math.max(1, ...names.map((n) => n.length));
+  const fit = HUB_PLATE_MAX_W / (longest * HUB_CHAR_W);
+  return Math.max(HUB_FONT_MIN, Math.min(HUB_FONT_MAX, fit));
+}
+
+function plateWidth(label: string, font: number): number {
+  return Math.max(46, Math.round(label.length * font * HUB_CHAR_W) + 18);
 }
 
 export default function Clock({
@@ -305,35 +314,64 @@ export default function Clock({
         )}
 
         {!hubIsSpecial &&
-          hubChips.map((c, k) => {
-            const { x, y } = hubSlot(k, hubChips.length);
-            const isEnemy = c.actorKind === 'npc';
-            const mine = ownPlayerId != null && c.playerId === ownPlayerId;
-            const face = chipAbbrev(c.displayName);
+          hubChips.length > 0 &&
+          (() => {
+            const shown = hubChips.slice(0, MAX_HUB_PLATES);
+            const overflow = hubChips.length - shown.length;
+            const labels = shown.map((c) => fitName(c.displayName));
+            const font = hubFont(labels);
+            const h = Math.round(font + 11);
+            const rows = shown.length + (overflow > 0 ? 1 : 0);
+            const top = CY - (rows * h + (rows - 1) * HUB_PLATE_GAP) / 2;
+
             return (
-              <g key={c.id} className="hub-chip">
-                <title>{c.displayName}</title>
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={HUB_R}
-                  fill={isEnemy ? '#22181a' : playerColor(c.playerId ?? 0)}
-                  stroke={mine ? '#8a6d3f' : '#2b2620'}
-                  strokeWidth={mine ? 3.4 : 1.6}
-                />
-                <text
-                  x={x}
-                  y={y + hubFontSize(face) / 3}
-                  className="hub-chip-face"
-                  textAnchor="middle"
-                  fontSize={hubFontSize(face)}
-                  fill={isEnemy ? '#f2ece0' : '#22181a'}
-                >
-                  {face}
-                </text>
+              <g className="hub-plates">
+                {shown.map((c, k) => {
+                  const label = labels[k];
+                  const w = plateWidth(label, font);
+                  const y = top + k * (h + HUB_PLATE_GAP);
+                  const isEnemy = c.actorKind === 'npc';
+                  const mine = ownPlayerId != null && c.playerId === ownPlayerId;
+                  return (
+                    <g key={c.id} className="hub-plate">
+                      <title>{c.displayName}</title>
+                      <rect
+                        x={CX - w / 2}
+                        y={y}
+                        width={w}
+                        height={h}
+                        rx={5}
+                        fill={isEnemy ? '#22181a' : playerColor(c.playerId ?? 0)}
+                        stroke={mine ? '#8a6d3f' : '#2b2620'}
+                        strokeWidth={mine ? 3 : 1.4}
+                      />
+                      <text
+                        x={CX}
+                        y={y + h / 2 + font * 0.35}
+                        className="hub-plate-name"
+                        textAnchor="middle"
+                        fontSize={font}
+                        fill={isEnemy ? '#f2ece0' : '#22181a'}
+                      >
+                        {label}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {overflow > 0 && (
+                  <text
+                    x={CX}
+                    y={top + shown.length * (h + HUB_PLATE_GAP) + h / 2 + 4}
+                    className="hub-plate-more"
+                    textAnchor="middle"
+                  >
+                    +{overflow} more
+                  </text>
+                )}
               </g>
             );
-          })}
+          })()}
 
         {/* Chips last — the hand must never hide who is on the wedge it points at. */}
         {WHEEL.map((w, i) => {

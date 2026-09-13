@@ -582,12 +582,22 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
 .clock-pivot-cap { fill: #f2ece0; pointer-events: none; }
 
 /* Whoever is up, shown large in the middle of the dial. */
-.hub-chip-face {
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-weight: 700;
+/* Names, not initials — the middle is the one place there is room to spell
+   them out, so it uses the body sans rather than the chips' monospace. */
+.hub-plate-name {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
   pointer-events: none;
 }
-.hub-chip { animation: chip-pop 0.18s ease-out; }
+.hub-plate-more {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  fill: #2b2620;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.hub-plate { animation: chip-pop 0.18s ease-out; }
 .hub-special {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 15px;
@@ -607,7 +617,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -2
 
 @media (prefers-reduced-motion: reduce) {
   .clock-hand, .clock-hour-hand, .hour-band { transition: none !important; }
-  .chip, .hub-chip { animation: none !important; }
+  .chip, .hub-plate { animation: none !important; }
 }
 
 /* ---------------------------- layout ---------------------------- */
